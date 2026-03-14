@@ -79,21 +79,23 @@ try:
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
-   # --- 3. CUSTOM COLOR SCALES (PRECISE THERMOGRAPHIC) ---
+  # --- 3. CUSTOM COLOR SCALES (NO GREEN, CINEMATIC THERMAL) ---
     # Total scale spans 90 degrees (-40 to 50). 
     temp_custom_scale = [
         [0.000, "#000033"],  # Deep Space Navy (-40°C)
-        [0.222, "#00008B"],  # Dark Blue (Exactly -20°C)
-        [0.444, "#0000FF"],  # Standard Blue (Exactly 0°C)
-        [0.556, "#00BFFF"],  # Cyan/Deep Sky Blue (10°C)
-        [0.722, "#00FF00"],  # Green (Exactly 25°C)
-        [0.778, "#FFFF00"],  # Yellow (Exactly 30°C)
+        [0.222, "#00008B"],  # Dark Blue (-20°C)
+        [0.444, "#0000FF"],  # Standard Blue (0°C)
+        [0.556, "#87CEEB"],  # Sky Blue Starts (10°C)
+        [0.667, "#ADD8E6"],  # Light Sky Blue Ends (20°C)
+        [0.744, "#FFD700"],  # Yellowish/Gold (Exactly 27°C)
         [0.833, "#FFA500"],  # Orange (Exactly 35°C)
-        [0.889, "#FF8C00"],  # Dark Orange (Exactly 40°C)
-        [1.000, "#FF0000"]   # Bright Red (50°C and above)
+        [0.889, "#FF4500"],  # Reddish Orange (Exactly 40°C)
+        [0.944, "#FF0000"],  # Bright Red (Exactly 45°C)
+        [1.000, "#8B0000"]   # Deep Red (50°C and above)
     ]
 
     cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": "Blues"}
+    units = {"Temp": "°C", "Wind Speed": "m/s", "Precip": "mm"}: "Blues"}
     units = {"Temp": "°C", "Wind Speed": "m/s", "Precip": "mm"}
     # --- 4. TOP SECTION: MAP (80% Height) ---
     if param not in ds:
