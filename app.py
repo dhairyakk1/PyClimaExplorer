@@ -16,7 +16,9 @@ st.markdown("""
     ::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 4px; }
     [data-testid="stMetricValue"] { font-size: 1.8rem; color: #00d4ff; font-weight: bold; }
     .stPlotlyChart { margin-bottom: -15px; }
-    header {visibility: hidden;}
+    /* FIX: Hide the right-side toolbar (deploy/menu) but keep the sidebar toggle visible */
+    [data-testid="stToolbar"] {visibility: hidden;}
+    header {background: transparent !important;}
     footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
