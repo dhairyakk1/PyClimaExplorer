@@ -44,8 +44,7 @@ def load_data():
     if time_name and time_name != "time":
         ds = ds.rename({time_name: "time"})
 
-    # 🌍 THE FIX: ALIGN LONGITUDE TO -180 TO +180
-    # This prevents negative coordinates (like the Americas) from plotting off-screen
+    # 🌍 LONGITUDE WRAP FIX (-180 TO +180)
     lon_name = 'lon' if 'lon' in ds.coords else 'longitude'
     if lon_name in ds.coords and float(ds[lon_name].max()) > 180:
         ds.coords[lon_name] = (ds.coords[lon_name] + 180) % 360 - 180
@@ -81,26 +80,58 @@ try:
 
     st.sidebar.divider()
     
+    # 🌍 UPGRADED FEATURE: CONTINENT-WISE QUICK-JUMP
     st.sidebar.subheader("📍 Location Targeting")
     
-    PRESET_LOCATIONS = {
-        "Custom Coordinates": None,
-        "Mumbai, India": (19.0, 72.5),
-        "Delhi, India": (28.5, 77.0),
-        "London, UK": (51.5, 0.0),
-        "New York, USA": (40.5, -74.0),
-        "Tokyo, Japan": (35.5, 139.5),
-        "Sydney, Australia": (-34.0, 151.0),
-        "Sahara Desert": (23.5, 12.0),
-        "Amazon Rainforest": (-3.0, -60.0)
-    }
+    nav_mode = st.sidebar.radio("Navigation Method", ["Quick Jump Directory", "Custom Coordinates"])
     
-    location_choice = st.sidebar.selectbox("Quick Jump to Region:", list(PRESET_LOCATIONS.keys()))
-    
-    if location_choice != "Custom Coordinates":
-        st.session_state.lat = PRESET_LOCATIONS[location_choice][0]
-        st.session_state.lon = PRESET_LOCATIONS[location_choice][1]
+    if nav_mode == "Quick Jump Directory":
+        REGION_PRESETS = {
+            "🌎 North America": {
+                "New York, USA": (40.7, -74.0),
+                "Los Angeles, USA": (34.0, -118.2),
+                "Toronto, Canada": (43.7, -79.4),
+                "Mexico City, Mexico": (19.4, -99.1)
+            },
+            "🌍 South America": {
+                "Amazon Rainforest": (-3.0, -60.0),
+                "São Paulo, Brazil": (-23.5, -46.6),
+                "Buenos Aires, Argentina": (-34.6, -58.4),
+                "Santiago, Chile": (-33.4, -70.6)
+            },
+            "🌍 Europe": {
+                "London, UK": (51.5, -0.1),
+                "Paris, France": (48.8, 2.3),
+                "Berlin, Germany": (52.5, 13.4),
+                "Rome, Italy": (41.9, 12.5)
+            },
+            "🌍 Africa": {
+                "Sahara Desert": (23.5, 12.0),
+                "Cairo, Egypt": (30.0, 31.2),
+                "Lagos, Nigeria": (6.5, 3.4),
+                "Cape Town, South Africa": (-33.9, 18.4)
+            },
+            "🌏 Asia": {
+                "Mumbai, India": (19.0, 72.8),
+                "Delhi, India": (28.6, 77.2),
+                "Tokyo, Japan": (35.6, 139.6),
+                "Beijing, China": (39.9, 116.4),
+                "Dubai, UAE": (25.2, 55.2)
+            },
+            "🌏 Oceania": {
+                "Sydney, Australia": (-33.8, 151.2),
+                "Melbourne, Australia": (-37.8, 144.9),
+                "Auckland, New Zealand": (-36.8, 174.7)
+            }
+        }
+        
+        region = st.sidebar.selectbox("Select Continent:", list(REGION_PRESETS.keys()))
+        city = st.sidebar.selectbox("Select Location:", list(REGION_PRESETS[region].keys()))
+        
+        st.session_state.lat = REGION_PRESETS[region][city][0]
+        st.session_state.lon = REGION_PRESETS[region][city][1]
 
+    # Manual coordinate entry perfectly synced
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
