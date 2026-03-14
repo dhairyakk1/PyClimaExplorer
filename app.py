@@ -171,10 +171,12 @@ try:
         fig.add_shape(type="line", x0=st.session_state.lon + gap, x1=st.session_state.lon + length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon - gap, x1=st.session_state.lon - length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         
-        # HIGH-DENSITY COLORBAR TICKS
+        # 🎯 HIGH-DENSITY COLORBAR TICKS
         cbar_settings = dict(
-            title=units[param],
-            titlefont=dict(color="#00d4ff", size=14, weight="bold"), 
+            title=dict(
+                text=f"<b>{units[param]}</b>",
+                font=dict(color="#00d4ff", size=14)
+            ),
             tickfont=dict(color="#FFF")
         )
         
@@ -183,7 +185,6 @@ try:
             cbar_settings["tickmode"] = "linear"
             cbar_settings["tick0"] = 0
             cbar_settings["dtick"] = 10
-
         fig.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             margin={"l": 0, "r": 0, "b": 0, "t": 10}, height=550, 
