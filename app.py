@@ -132,7 +132,10 @@ try:
 
     # --- UI & COLOR SCALES ---
     temp_scale = [[0.0, "#011959"], [0.33, "#105a96"], [0.55, "#3ba3a1"], [0.77, "#f09a39"], [1.0, "#5b0b1e"]]
-    precip_scale = [[0.0, "rgba(0,0,0,0)"], [0.15, "#80DEEA"], [0.50, "#00ACC1"], [1.00, "#01579B"]]
+    
+    # 🎯 UPDATED PRECIPITATION SCALE (White Base -> Deep Blue Rain)
+    precip_scale = [[0.0, "#FFFFFF"], [0.15, "#BBDEFB"], [0.50, "#1E88E5"], [1.00, "#0D47A1"]]
+    
     cmaps = {"Temp": temp_scale, "Wind Speed": "Viridis", "Precip": precip_scale}
     units = {"Temp": "Temperature (C)", "Wind Speed": "Wind Speed (m/s)", "Precip": "Precipitation (mm)"}
 
@@ -147,7 +150,7 @@ try:
         
         z_min, z_max = None, None
         if param == "Temp":
-            z_min, z_max = -40, 45  # Hard-locks the red limit to exactly 45°C
+            z_min, z_max = -40, 45 
 
         fig = px.imshow(
             data_slice, x=data_slice.lon, y=data_slice.lat, 
@@ -155,23 +158,22 @@ try:
             zmin=z_min, zmax=z_max 
         )
         
-        # 🎯 THE SMALLER, TIGHTER RED CROSSHAIR
+        # 🎯 BRIGHT RED TARGET-LOCK CROSSHAIR (Thicker stroke for visibility)
         fig.add_trace(go.Scatter(
             x=[st.session_state.lon], y=[st.session_state.lat], 
             mode="markers", 
-            marker=dict(symbol="circle-open", size=8, line=dict(color="#FF0000", width=1.5)), 
+            marker=dict(symbol="circle-open", size=8, line=dict(color="#FF0000", width=2.5)), 
             showlegend=False, hoverinfo="skip"
         ))
         
-        # Gap reduced to pull lines flush to the smaller circle diameter
         gap, length = 1.2, 10.0 
-        l_style = dict(color="#FF0000", width=1)
+        l_style = dict(color="#FF0000", width=1.5)
         fig.add_shape(type="line", x0=st.session_state.lon, x1=st.session_state.lon, y0=st.session_state.lat + gap, y1=st.session_state.lat + length, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon, x1=st.session_state.lon, y0=st.session_state.lat - gap, y1=st.session_state.lat - length, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon + gap, x1=st.session_state.lon + length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon - gap, x1=st.session_state.lon - length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         
-        # 🎯 HIGH-DENSITY COLORBAR TICKS
+        # 🎯 FIXED COLORBAR TITLES & DENSITY
         cbar_settings = dict(
             title=dict(
                 text=f"<b>{units[param]}</b>",
@@ -185,6 +187,7 @@ try:
             cbar_settings["tickmode"] = "linear"
             cbar_settings["tick0"] = 0
             cbar_settings["dtick"] = 10
+
         fig.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             margin={"l": 0, "r": 0, "b": 0, "t": 10}, height=550, 
