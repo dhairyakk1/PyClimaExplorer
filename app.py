@@ -205,7 +205,7 @@ try:
         globe_fig = go.Figure()
 
         if param == "Precipitation":
-            # 🎯 SCATTERGEO FOR RAIN: Dark Oceans, White Land, Lighter Blue Rain
+            # 🎯 SCATTERGEO FOR RAIN: Dark Oceans, White Land, Synchronized Precipitation Scale
             df = data_slice.to_dataframe().reset_index()
             val_col = units[param]
             df_rain = df[df[val_col] > 0.1] # Filter out dry areas so the map shows through
@@ -216,7 +216,7 @@ try:
                 marker=dict(
                     size=4,
                     color=df_rain[val_col],
-                    colorscale=[[0.0, "#4FC3F7"], [1.0, "#0277BD"]], # Brilliant light blues
+                    colorscale=cmaps.get(param, "Viridis"), # 🎯 NOW PERFECTLY MATCHES 2D MAP
                     cmin=z_min, cmax=z_max,
                     opacity=0.85
                 ),
