@@ -1,6 +1,7 @@
 streamlit
 xarray
-netCDF4
-plotly
-pandas
 numpy
+pandas
+plotly
+netCDF4
+dask[array]
