@@ -16,9 +16,10 @@ st.markdown("""
     ::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 4px; }
     [data-testid="stMetricValue"] { font-size: 1.8rem; color: #00d4ff; font-weight: bold; }
     .stPlotlyChart { margin-bottom: -15px; }
-    /* FIX: Hide the right-side toolbar (deploy/menu) but keep the sidebar toggle visible */
-    [data-testid="stToolbar"] {visibility: hidden;}
-    header {background: transparent !important;}
+    
+    /* THE FIX: Target the annoying default buttons directly, but leave the header intact! */
+    #MainMenu {visibility: hidden;}
+    .stDeployButton {display:none;}
     footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
