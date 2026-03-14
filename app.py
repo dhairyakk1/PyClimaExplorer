@@ -11,7 +11,7 @@ st.set_page_config(layout="wide", page_title="The Pointless Pointers | Climate S
 
 st.markdown("""
     <style>
-    .main { background-color: #0E1117; color: #FFFFFF; }
+    .main { background-color: #070B14; color: #FFFFFF; } /* Deepened the background to match your image */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 4px; }
     [data-testid="stMetricValue"] { font-size: 1.8rem; color: #00d4ff; font-weight: bold; }
@@ -40,16 +40,13 @@ def load_data():
         
     ds = xr.open_dataset(file_path)
     
-    # Universal Time Finder
     time_name = next((c for c in ds.coords if "time" in str(c).lower()), None)
     if time_name and time_name != "time":
         ds = ds.rename({time_name: "time"})
 
-    # Map variables to friendly names
     rename_map = {"t2m": "Temp", "u10": "U", "v10": "V", "tp": "Precip"}
     ds = ds.rename({k: v for k, v in rename_map.items() if k in ds})
     
-    # Conversions
     if "Temp" in ds and ds["Temp"].max() > 100: 
         ds["Temp"] = ds["Temp"] - 273.15
             
@@ -82,14 +79,17 @@ try:
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
-    # --- 3. CUSTOM COLOR SCALES (TEAMMATE'S UPGRADE) ---
+    # --- 3. CUSTOM COLOR SCALES (THERMOGRAPHIC MATCH) ---
+    # This precisely recreates the Blue -> Cyan -> Green -> Yellow -> Orange -> Red from your image
     temp_custom_scale = [
-        [0.0, "#00008B"],   # -40C: Dark Blue
-        [0.28, "#87CEEB"],  # -15C: Sky Blue (transition)
-        [0.44, "#FFFFFF"],  # 0C: Pure White
-        [0.61, "#FFFF00"],  # 15C: Yellow
-        [0.83, "#FFA500"],  # 35C: Orange
-        [1.0, "#FF0000"]    # 50C: Total Red
+        [0.00, "#000055"],  # Deep Space Blue (-40°C)
+        [0.15, "#0000FF"],  # Pure Blue
+        [0.30, "#00FFFF"],  # Cyan
+        [0.45, "#00FF00"],  # Green (Around 0°C)
+        [0.60, "#FFFF00"],  # Yellow (Around 14°C)
+        [0.75, "#FFA500"],  # Orange (Around 27°C)
+        [0.90, "#FF4500"],  # Orange-Red
+        [1.00, "#FF0000"]   # Bright Red (50°C)
     ]
 
     cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": "Blues"}
@@ -115,7 +115,7 @@ try:
         zmax=z_max
     )
     
-    # 🎯 HIGH-TECH TARGET RETICLE (RESTORED)
+    # 🎯 HIGH-TECH TARGET RETICLE 
     fig.add_trace(go.Scatter(
         x=[st.session_state.lon], y=[st.session_state.lat],
         mode="markers",
@@ -131,6 +131,8 @@ try:
     
     fig.update_layout(
         template="plotly_dark",
+        plot_bgcolor="rgba(0,0,0,0)", # Makes oceans totally transparent to show the dark background
+        paper_bgcolor="rgba(0,0,0,0)",
         margin={"l": 10, "r": 10, "b": 0, "t": 50},
         height=540,
         xaxis={"showgrid": False, "zeroline": False, "visible": False}, 
@@ -139,7 +141,7 @@ try:
         hovermode="closest"
     )
     
-    # 🖱️ CAPTURING THE CLICK EVENT (RESTORED)
+    # 🖱️ CAPTURING THE CLICK EVENT
     map_event = st.plotly_chart(
         fig, 
         use_container_width=True, 
@@ -161,11 +163,9 @@ try:
     st.divider()
     c1, c2, c3, c4 = st.columns([1, 1, 1, 3])
     
-    # Teammate's robust coordinate checker
     lat_key = 'lat' if 'lat' in ds.coords else 'latitude'
     lon_key = 'lon' if 'lon' in ds.coords else 'longitude'
     
-    # Fetching data using the session state variables
     point_data = ds[param].sel({lat_key: st.session_state.lat, lon_key: st.session_state.lon}, method="nearest")
     current_val = float(point_data.sel(time=selected_time, method="nearest"))
 
