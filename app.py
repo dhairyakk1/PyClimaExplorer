@@ -11,7 +11,7 @@ st.set_page_config(layout="wide", page_title="The Pointless Pointers | Climate S
 
 st.markdown("""
     <style>
-    .main { background-color: #070B14; color: #FFFFFF; } /* Deepened the background to match your image */
+    .main { background-color: #070B14; color: #FFFFFF; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 4px; }
     [data-testid="stMetricValue"] { font-size: 1.8rem; color: #00d4ff; font-weight: bold; }
@@ -55,7 +55,7 @@ def load_data():
         ds = ds.drop_vars(["U", "V"]) 
         
     if "Precip" in ds and ds["Precip"].max() < 1: 
-        ds["Precip"] = ds["Precip"] * 1000
+        ds["Precip"] = ds["Precip"] * 1000 # Convert to mm
         
     return ds
 
@@ -79,30 +79,53 @@ try:
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
-  # --- 3. CUSTOM COLOR SCALES (ICON WEATHER MODEL MATCH) ---
-    # Total scale spans 90 degrees (-40 to 50).
+    # --- 3. CUSTOM COLOR SCALES & LOGIC ---
+    # TEMPERATURE: ICON Weather Model Match (-40 to 50)
     temp_custom_scale = [
         [0.000, "#011959"],  # Deep Arctic Blue (-40°C)
         [0.333, "#105a96"],  # Ocean Blue (-10°C)
-        [0.444, "#3ba3a1"],  # Teal/Cyan (0°C - matches the cool oceans in your image)
-        [0.556, "#a3d977"],  # Pale Yellow-Green (10°C - matches Southern Africa/Europe)
+        [0.444, "#3ba3a1"],  # Teal/Cyan (0°C)
+        [0.556, "#a3d977"],  # Pale Yellow-Green (10°C)
         [0.667, "#f5d448"],  # Golden Yellow (20°C)
-        [0.778, "#f09a39"],  # Deep Orange (30°C - matches India/Middle East borders)
-        [0.889, "#c12128"],  # Crimson Red (40°C - matches the Sahara Desert)
-        [1.000, "#5b0b1e"]   # Dark Burgundy/Purple (50°C+ - absolute hottest cores)
+        [0.778, "#f09a39"],  # Deep Orange (30°C)
+        [0.889, "#c12128"],  # Crimson Red (40°C)
+        [1.000, "#5b0b1e"]   # Dark Burgundy/Purple (50°C+)
     ]
 
-    cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": "Blues"}
+    # PRECIPITATION: Teammate's Capped 0-120mm Scale
+    precip_custom_scale = [
+        [0.0, "#FFFFFF"],    # 0 mm (White)
+        [0.083, "#E0F7FA"],  # 10 mm
+        [0.166, "#B2EBF2"],  # 20 mm
+        [0.25, "#80DEEA"],   # 30 mm
+        [0.333, "#4DD0E1"],  # 40 mm
+        [0.416, "#26C6DA"],  # 50 mm
+        [0.5, "#00BCD4"],    # 60 mm
+        [0.583, "#00ACC1"],  # 70 mm
+        [0.666, "#0097A7"],  # 80 mm
+        [0.75, "#00838F"],   # 90 mm
+        [0.833, "#006064"],  # 100 mm 
+        [0.916, "#01579B"],  # 110 mm
+        [1.0, "#0D47A1"]     # 120 mm (Darkest Blue)
+    ]
+
+    cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": precip_custom_scale}
     units = {"Temp": "°C", "Wind Speed": "m/s", "Precip": "mm"}
-    # --- 4. TOP SECTION: MAP (80% Height) ---
+
+    # --- 4. TOP SECTION: MAP ---
     if param not in ds:
         st.error(f"Parameter '{param}' not found in the dataset.")
         st.stop()
         
     data_slice = ds[param].sel(time=selected_time, method="nearest")
     
-    # Range Locks for Consistency
-    z_min, z_max = (-40, 50) if param == "Temp" else (None, None)
+    # Scaling logic locks
+    if param == "Temp":
+        z_min, z_max = (-40, 50)
+    elif param == "Precip":
+        z_min, z_max = (0, 120) 
+    else:
+        z_min, z_max = (None, None)
 
     fig = px.imshow(
         data_slice,
@@ -114,7 +137,7 @@ try:
         zmax=z_max
     )
     
-    # 🎯 HIGH-TECH TARGET RETICLE 
+    # TARGET RETICLE
     fig.add_trace(go.Scatter(
         x=[st.session_state.lon], y=[st.session_state.lat],
         mode="markers",
@@ -130,17 +153,19 @@ try:
     
     fig.update_layout(
         template="plotly_dark",
-        plot_bgcolor="rgba(0,0,0,0)", # Makes oceans totally transparent to show the dark background
+        plot_bgcolor="rgba(0,0,0,0)", # Transparent oceans!
         paper_bgcolor="rgba(0,0,0,0)",
         margin={"l": 10, "r": 10, "b": 0, "t": 50},
         height=540,
         xaxis={"showgrid": False, "zeroline": False, "visible": False}, 
         yaxis={"showgrid": False, "zeroline": False, "visible": False}, 
-        coloraxis_colorbar=dict(title=units.get(param, "")),
+        coloraxis_colorbar=dict(
+            title=units.get(param, ""),
+            tickvals=list(range(0, 121, 10)) if param == "Precip" else None
+        ),
         hovermode="closest"
     )
     
-    # 🖱️ CAPTURING THE CLICK EVENT
     map_event = st.plotly_chart(
         fig, 
         use_container_width=True, 
@@ -158,7 +183,7 @@ try:
             st.toast(f"Target Acquired: Lat {clicked_lat:.1f}, Lon {clicked_lon:.1f}", icon="🎯")
             st.rerun()
 
-    # --- 5. BOTTOM SECTION: STATS & TREND (20% Height) ---
+    # --- 5. BOTTOM SECTION: STATS & TREND ---
     st.divider()
     c1, c2, c3, c4 = st.columns([1, 1, 1, 3])
     
@@ -169,8 +194,8 @@ try:
     current_val = float(point_data.sel(time=selected_time, method="nearest"))
 
     c1.metric(f"Local {param}", f"{current_val:.2f} {units.get(param, '')}")
-    c2.metric("6-Mo Peak", f"{float(point_data.max()):.2f}")
-    c3.metric("6-Mo Floor", f"{float(point_data.min()):.2f}")
+    c2.metric("6-Mo Peak", f"{float(point_data.max()):.2f} {units.get(param, '')}")
+    c3.metric("6-Mo Floor", f"{float(point_data.min()):.2f} {units.get(param, '')}")
     
     trend_df = point_data.to_dataframe().reset_index()
     csv_data = trend_df[["time", param]].to_csv(index=False).encode("utf-8")
