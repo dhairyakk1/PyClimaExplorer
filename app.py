@@ -136,7 +136,7 @@ try:
     cmaps = {"Temperature": temp_scale, "Wind Speed": "Viridis", "Precipitation": precip_scale}
     units = {"Temperature": "Temperature (C)", "Wind Speed": "Wind Speed (m/s)", "Precipitation": "Precipitation (mm)"}
 
-    # Extract single shared data slice for 2D, Metrics, and 3D Globe
+    # Extract data slice
     data_slice = ds[param].sel(time=selected_time, method="nearest").compute()
     if param == "Temperature" and data_slice.max() > 100: data_slice = data_slice - 273.15
     if param == "Precipitation" and data_slice.max() < 0.1: data_slice = data_slice * 1000
@@ -202,62 +202,92 @@ try:
     st.markdown(f"<h3 style='text-align: center; color: #FFFFFF; font-weight: 300; letter-spacing: 2px;'>3D PLANETARY <span style='color: #00d4ff; font-weight: bold;'>PROJECTION</span></h3>", unsafe_allow_html=True)
     
     with st.container():
-        # Mathematics to wrap the 2D grid around a 3D sphere
-        lon_grid, lat_grid = np.meshgrid(data_slice.lon.values, data_slice.lat.values)
-        lon_rad = np.radians(lon_grid)
-        lat_rad = np.radians(lat_grid)
-        
-        x_sphere = np.cos(lat_rad) * np.cos(lon_rad)
-        y_sphere = np.cos(lat_rad) * np.sin(lon_rad)
-        z_sphere = np.sin(lat_rad)
-        
         globe_fig = go.Figure()
-        
-        # Apply the exact same visual parameters to the 3D surface
-        surface_kwargs = dict(
-            x=x_sphere, y=y_sphere, z=z_sphere,
-            surfacecolor=data_slice.values,
-            colorscale=cmaps.get(param, "Viridis"),
-            showscale=False, # Colorbar already handled by the 2D map above
-            lighting=dict(ambient=0.7, diffuse=0.8, roughness=0.5, specular=0.1, fresnel=0.2)
-        )
-        if z_min is not None and z_max is not None:
-            surface_kwargs["cmin"] = z_min
-            surface_kwargs["cmax"] = z_max
+
+        if param == "Precipitation":
+            # 🎯 SCATTERGEO FOR RAIN: Dark Oceans, White Land, Lighter Blue Rain
+            df = data_slice.to_dataframe().reset_index()
+            val_col = units[param]
+            df_rain = df[df[val_col] > 0.1] # Filter out dry areas so the map shows through
             
-        globe_fig.add_trace(go.Surface(**surface_kwargs))
-        
-        # 3D Target Marker Math
-        m_lat_rad = np.radians(st.session_state.lat)
-        m_lon_rad = np.radians(st.session_state.lon)
-        mx = 1.02 * np.cos(m_lat_rad) * np.cos(m_lon_rad) # 1.02 floats it slightly above the surface
-        my = 1.02 * np.cos(m_lat_rad) * np.sin(m_lon_rad)
-        mz = 1.02 * np.sin(m_lat_rad)
-        
-        # 3D Beacon
-        globe_fig.add_trace(go.Scatter3d(
-            x=[mx], y=[my], z=[mz],
-            mode="markers",
-            marker=dict(size=6, color="#FF0000", symbol="circle", line=dict(color="#FFFFFF", width=1)),
-            showlegend=False, hoverinfo="skip"
-        ))
-        
-        # Auto-aim the camera at the selected target
-        cam_x, cam_y, cam_z = mx * 1.5, my * 1.5, mz * 1.5
-        
-        globe_fig.update_layout(
-            scene=dict(
-                xaxis=dict(showbackground=False, visible=False),
-                yaxis=dict(showbackground=False, visible=False),
-                zaxis=dict(showbackground=False, visible=False),
+            globe_fig.add_trace(go.Scattergeo(
+                lon=df_rain['lon'],
+                lat=df_rain['lat'],
+                marker=dict(
+                    size=4,
+                    color=df_rain[val_col],
+                    colorscale=[[0.0, "#4FC3F7"], [1.0, "#0277BD"]], # Brilliant light blues
+                    cmin=z_min, cmax=z_max,
+                    opacity=0.85
+                ),
+                showlegend=False, hoverinfo="skip"
+            ))
+            
+            # Geographic Settings for Precipitation
+            globe_fig.update_geos(
+                projection_type="orthographic",
+                projection_rotation=dict(lon=st.session_state.lon, lat=st.session_state.lat, roll=0),
+                showocean=True, oceancolor="#0A1930",  # Dark Blue Ocean
+                showland=True, landcolor="#FFFFFF",    # White Land
+                showcoastlines=True, coastlinecolor="rgba(0,0,0,0.2)",
+                showlakes=False,
                 bgcolor="rgba(0,0,0,0)",
-                camera=dict(eye=dict(x=cam_x, y=cam_y, z=cam_z))
-            ),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=0, r=0, b=0, t=0),
-            height=650
-        )
+                framecolor="rgba(0,0,0,0)"
+            )
+            
+        else:
+            # 🎯 CONTINUOUS SURFACE FOR TEMP / WIND
+            lon_grid, lat_grid = np.meshgrid(data_slice.lon.values, data_slice.lat.values)
+            lon_rad, lat_rad = np.radians(lon_grid), np.radians(lat_grid)
+            
+            x_sphere = np.cos(lat_rad) * np.cos(lon_rad)
+            y_sphere = np.cos(lat_rad) * np.sin(lon_rad)
+            z_sphere = np.sin(lat_rad)
+            
+            surface_kwargs = dict(
+                x=x_sphere, y=y_sphere, z=z_sphere,
+                surfacecolor=data_slice.values,
+                colorscale=cmaps.get(param, "Viridis"),
+                showscale=False, 
+                lighting=dict(ambient=0.7, diffuse=0.8, roughness=0.5, specular=0.1, fresnel=0.2)
+            )
+            if z_min is not None and z_max is not None:
+                surface_kwargs.update({"cmin": z_min, "cmax": z_max})
+                
+            globe_fig.add_trace(go.Surface(**surface_kwargs))
+            
+            # Scene rotation for Temp/Wind
+            cam_x = 1.5 * np.cos(np.radians(st.session_state.lat)) * np.cos(np.radians(st.session_state.lon))
+            cam_y = 1.5 * np.cos(np.radians(st.session_state.lat)) * np.sin(np.radians(st.session_state.lon))
+            cam_z = 1.5 * np.sin(np.radians(st.session_state.lat))
+            
+            globe_fig.update_layout(
+                scene=dict(
+                    xaxis=dict(showbackground=False, visible=False),
+                    yaxis=dict(showbackground=False, visible=False),
+                    zaxis=dict(showbackground=False, visible=False),
+                    bgcolor="rgba(0,0,0,0)",
+                    camera=dict(eye=dict(x=cam_x, y=cam_y, z=cam_z))
+                )
+            )
+
+        # 🎯 UNIVERSAL 3D BEACON
+        beacon_kwargs = {}
+        if param == "Precipitation":
+            beacon_kwargs = dict(type="scattergeo", lon=[st.session_state.lon], lat=[st.session_state.lat])
+        else:
+            mx = 1.02 * np.cos(np.radians(st.session_state.lat)) * np.cos(np.radians(st.session_state.lon))
+            my = 1.02 * np.cos(np.radians(st.session_state.lat)) * np.sin(np.radians(st.session_state.lon))
+            mz = 1.02 * np.sin(np.radians(st.session_state.lat))
+            beacon_kwargs = dict(type="scatter3d", x=[mx], y=[my], z=[mz])
+            
+        globe_fig.add_trace(go.Scatter(**beacon_kwargs) if param == "Precipitation" else go.Scatter3d(**beacon_kwargs, mode="markers", marker=dict(size=6, color="#FF0000", symbol="circle", line=dict(color="#FFFFFF", width=1)), showlegend=False, hoverinfo="skip"))
+        
+        # Override precipitation beacon specifically because go.Scattergeo syntax differs slightly
+        if param == "Precipitation":
+            globe_fig.add_trace(go.Scattergeo(lon=[st.session_state.lon], lat=[st.session_state.lat], mode="markers", marker=dict(size=10, color="#FF0000", line=dict(color="#FFFFFF", width=1.5)), showlegend=False, hoverinfo="skip"))
+
+        globe_fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, b=0, t=0), height=650)
         st.plotly_chart(globe_fig, use_container_width=True)
 
 except Exception as e:
