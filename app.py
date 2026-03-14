@@ -22,7 +22,7 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     .stDeployButton {display:none;}
     footer {visibility: hidden;}
-    header {background-color: transparent !important;} /* Makes header invisible but keeps the > button! */
+    header {background-color: transparent !important;}
     
     /* Scrollbar Polish */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -49,7 +49,6 @@ st.markdown("""
     .sidebar-title { font-size: 1.5rem; font-weight: bold; color: #00d4ff; text-align: center; margin-bottom: 20px;}
     .team-credit { text-align: center; font-size: 0.8rem; color: #555; margin-top: 50px; }
     
-    /* Divider Polish */
     hr { border-color: rgba(0, 212, 255, 0.1); }
     </style>
     """, unsafe_allow_html=True)
@@ -145,36 +144,51 @@ try:
         if param == "Temp" and data_slice.max() > 100: data_slice = data_slice - 273.15
         if param == "Precip" and data_slice.max() < 0.1: data_slice = data_slice * 1000
         data_slice.name = units[param]
+        
+        z_min, z_max = None, None
+        if param == "Temp":
+            z_min, z_max = -40, 45  # Hard-locks the red limit to exactly 45°C
 
         fig = px.imshow(
             data_slice, x=data_slice.lon, y=data_slice.lat, 
-            color_continuous_scale=cmaps.get(param, "Viridis"), origin="lower", aspect="auto"
+            color_continuous_scale=cmaps.get(param, "Viridis"), origin="lower", aspect="auto",
+            zmin=z_min, zmax=z_max 
         )
         
-        # --- THE RED TARGET-LOCK CROSSHAIR ---
-        # 1. Hollow Red Circle
+        # 🎯 THE SMALLER, TIGHTER RED CROSSHAIR
         fig.add_trace(go.Scatter(
             x=[st.session_state.lon], y=[st.session_state.lat], 
             mode="markers", 
-            marker=dict(symbol="circle-open", size=14, line=dict(color="#FF0000", width=1.5)), 
+            marker=dict(symbol="circle-open", size=8, line=dict(color="#FF0000", width=1.5)), 
             showlegend=False, hoverinfo="skip"
         ))
         
-        # 2. Thin Red Lines touching the circle diameter
-        gap, length = 2.2, 12.0  # Gap matches the circle's radius
+        # Gap reduced to pull lines flush to the smaller circle diameter
+        gap, length = 1.2, 10.0 
         l_style = dict(color="#FF0000", width=1)
-        
         fig.add_shape(type="line", x0=st.session_state.lon, x1=st.session_state.lon, y0=st.session_state.lat + gap, y1=st.session_state.lat + length, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon, x1=st.session_state.lon, y0=st.session_state.lat - gap, y1=st.session_state.lat - length, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon + gap, x1=st.session_state.lon + length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon - gap, x1=st.session_state.lon - length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
-        # ---------------------------------------------
         
+        # HIGH-DENSITY COLORBAR TICKS
+        cbar_settings = dict(
+            title=units[param],
+            titlefont=dict(color="#00d4ff", size=14, weight="bold"), 
+            tickfont=dict(color="#FFF")
+        )
+        
+        # Force multiples of 10 for the Temperature scale
+        if param == "Temp":
+            cbar_settings["tickmode"] = "linear"
+            cbar_settings["tick0"] = 0
+            cbar_settings["dtick"] = 10
+
         fig.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             margin={"l": 0, "r": 0, "b": 0, "t": 10}, height=550, 
             xaxis_visible=False, yaxis_visible=False,
-            coloraxis_colorbar=dict(title="", tickfont=dict(color="#FFF"))
+            coloraxis_colorbar=cbar_settings
         )
         st.plotly_chart(fig, use_container_width=True)
 
