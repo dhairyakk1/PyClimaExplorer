@@ -82,7 +82,7 @@ def load_climate_data():
         ds.coords['lon'] = (ds.coords['lon'] + 180) % 360 - 180
         ds = ds.sortby(ds.lon) 
     
-    rename_map = {"t2m": "Temp", "u10": "U", "v10": "V", "tp": "Precip"}
+    rename_map = {"t2m": "Temperature", "u10": "U", "v10": "V", "tp": "Precipitation"}
     ds = ds.rename({k: v for k, v in rename_map.items() if k in ds})
     
     if "U" in ds and "V" in ds:
@@ -98,7 +98,7 @@ try:
     st.sidebar.markdown("<div class='sidebar-title'>⚙️ COMMAND CENTER</div>", unsafe_allow_html=True)
     
     st.sidebar.markdown("**1. Data Layer**")
-    param = st.sidebar.selectbox("Select Parameter", ["Temp", "Wind Speed", "Precip"], label_visibility="collapsed")
+    param = st.sidebar.selectbox("Select Parameter", ["Temperature", "Wind Speed", "Precipitation"], label_visibility="collapsed")
     
     time_coords = pd.to_datetime(ds.time.values)
     st.sidebar.markdown("<br>**2. Temporal Timeline**", unsafe_allow_html=True)
@@ -133,27 +133,35 @@ try:
     # --- UI & COLOR SCALES ---
     temp_scale = [[0.0, "#011959"], [0.33, "#105a96"], [0.55, "#3ba3a1"], [0.77, "#f09a39"], [1.0, "#5b0b1e"]]
     
-    # 🎯 SENSITIVE PRECIPITATION SCALE (Ramps up to blue much faster)
-    precip_scale = [[0.0, "#FFFFFF"], [0.05, "#BBDEFB"], [0.20, "#1E88E5"], [1.00, "#0D47A1"]]
+    # 🎯 EXTREME PRECIPITATION SCALE
+    # Compresses old 0-25mm into the 0.0-0.5 normalized range, then adds purple up to 1.0 (50mm)
+    precip_scale = [
+        [0.000, "#FFFFFF"], # 0 mm
+        [0.025, "#BBDEFB"], # 1.25 mm
+        [0.100, "#1E88E5"], # 5.0 mm
+        [0.500, "#0D47A1"], # 25.0 mm (Deep Blue)
+        [1.000, "#6A1B9A"]  # 50.0 mm (Extreme Purple)
+    ]
     
-    cmaps = {"Temp": temp_scale, "Wind Speed": "Viridis", "Precip": precip_scale}
-    units = {"Temp": "Temperature (C)", "Wind Speed": "Wind Speed (m/s)", "Precip": "Precipitation (mm)"}
+    cmaps = {"Temperature": temp_scale, "Wind Speed": "Viridis", "Precipitation": precip_scale}
+    units = {"Temperature": "Temperature (C)", "Wind Speed": "Wind Speed (m/s)", "Precipitation": "Precipitation (mm)"}
 
     # --- 4. MAIN DASHBOARD AREA ---
     st.markdown(f"<h2 style='text-align: center; color: #FFFFFF; font-weight: 300; letter-spacing: 2px;'>GLOBAL <span style='color: #00d4ff; font-weight: bold;'>{param.upper()}</span> DYNAMICS</h2>", unsafe_allow_html=True)
     
     with st.container():
         data_slice = ds[param].sel(time=selected_time, method="nearest").compute()
-        if param == "Temp" and data_slice.max() > 100: data_slice = data_slice - 273.15
-        if param == "Precip" and data_slice.max() < 0.1: data_slice = data_slice * 1000
+        
+        if param == "Temperature" and data_slice.max() > 100: data_slice = data_slice - 273.15
+        if param == "Precipitation" and data_slice.max() < 0.1: data_slice = data_slice * 1000
         data_slice.name = units[param]
         
-        # 🎯 HARD-LOCKING SCALES
+        # 🎯 HARD-LOCKING SCALES TO 50mm MAX
         z_min, z_max = None, None
-        if param == "Temp":
+        if param == "Temperature":
             z_min, z_max = -40, 45 
-        elif param == "Precip":
-            z_min, z_max = 0, 25  # Caps rain map at 25mm so average rainfall actually shows up as blue
+        elif param == "Precipitation":
+            z_min, z_max = 0, 50  
 
         fig = px.imshow(
             data_slice, x=data_slice.lon, y=data_slice.lat, 
@@ -176,7 +184,6 @@ try:
         fig.add_shape(type="line", x0=st.session_state.lon + gap, x1=st.session_state.lon + length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon - gap, x1=st.session_state.lon - length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         
-        # FIXED COLORBAR TITLES & DENSITY
         cbar_settings = dict(
             title=dict(
                 text=f"<b>{units[param]}</b>",
@@ -185,7 +192,7 @@ try:
             tickfont=dict(color="#FFF")
         )
         
-        if param == "Temp":
+        if param == "Temperature":
             cbar_settings["tickmode"] = "linear"
             cbar_settings["tick0"] = 0
             cbar_settings["dtick"] = 10
@@ -202,11 +209,12 @@ try:
 
     # 4B. METRICS & TREND CONTAINER
     point_series = ds[param].sel(lat=st.session_state.lat, lon=st.session_state.lon, method="nearest").compute()
-    if param == "Temp" and point_series.max() > 100: point_series = point_series - 273.15
-    if param == "Precip" and point_series.max() < 0.1: point_series = point_series * 1000
+    
+    if param == "Temperature" and point_series.max() > 100: point_series = point_series - 273.15
+    if param == "Precipitation" and point_series.max() < 0.1: point_series = point_series * 1000
     
     current_val = float(point_series.sel(time=selected_time, method="nearest"))
-    metric_unit = "°C" if param == "Temp" else ("m/s" if param == "Wind Speed" else "mm")
+    metric_unit = "°C" if param == "Temperature" else ("m/s" if param == "Wind Speed" else "mm")
 
     c_metrics, c_graph = st.columns([1, 2.5])
     
