@@ -92,21 +92,15 @@ try:
         [1.000, "#5b0b1e"]   # Dark Burgundy/Purple (50°C+)
     ]
 
-    # PRECIPITATION: Teammate's Capped 0-120mm Scale
+    # PRECIPITATION: Front-loaded, non-linear scale so even light rain shows up clearly
     precip_custom_scale = [
-        [0.0, "#FFFFFF"],    # 0 mm (White)
-        [0.083, "#E0F7FA"],  # 10 mm
-        [0.166, "#B2EBF2"],  # 20 mm
-        [0.25, "#80DEEA"],   # 30 mm
-        [0.333, "#4DD0E1"],  # 40 mm
-        [0.416, "#26C6DA"],  # 50 mm
-        [0.5, "#00BCD4"],    # 60 mm
-        [0.583, "#00ACC1"],  # 70 mm
-        [0.666, "#0097A7"],  # 80 mm
-        [0.75, "#00838F"],   # 90 mm
-        [0.833, "#006064"],  # 100 mm 
-        [0.916, "#01579B"],  # 110 mm
-        [1.0, "#0D47A1"]     # 120 mm (Darkest Blue)
+        [0.00, "#FFFFFF"],   # 0 mm (White/Dry)
+        [0.05, "#E0F7FA"],   # Trace Rain (Pale Blue)
+        [0.15, "#80DEEA"],   # Light Rain (Cyan)
+        [0.30, "#26C6DA"],   # Moderate Rain
+        [0.50, "#00ACC1"],   # Heavy Rain
+        [0.75, "#00838F"],   # Very Heavy Rain
+        [1.00, "#01579B"]    # Extreme Rain (Darkest Blue)
     ]
 
     cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": precip_custom_scale}
@@ -119,11 +113,15 @@ try:
         
     data_slice = ds[param].sel(time=selected_time, method="nearest")
     
-    # Scaling logic locks
+    # DYNAMIC SCALING LOGIC
     if param == "Temp":
         z_min, z_max = (-40, 50)
     elif param == "Precip":
-        z_min, z_max = (0, 120) 
+        z_min = 0
+        # Dynamically set max to 60% of the month's absolute highest pixel. 
+        # This prevents one crazy storm pixel from washing out the entire globe.
+        current_max = float(data_slice.max())
+        z_max = current_max * 0.6 if current_max > 0 else 10 
     else:
         z_min, z_max = (None, None)
 
@@ -153,16 +151,13 @@ try:
     
     fig.update_layout(
         template="plotly_dark",
-        plot_bgcolor="rgba(0,0,0,0)", # Transparent oceans!
+        plot_bgcolor="rgba(0,0,0,0)", 
         paper_bgcolor="rgba(0,0,0,0)",
         margin={"l": 10, "r": 10, "b": 0, "t": 50},
         height=540,
         xaxis={"showgrid": False, "zeroline": False, "visible": False}, 
         yaxis={"showgrid": False, "zeroline": False, "visible": False}, 
-        coloraxis_colorbar=dict(
-            title=units.get(param, ""),
-            tickvals=list(range(0, 121, 10)) if param == "Precip" else None
-        ),
+        coloraxis_colorbar=dict(title=units.get(param, "")), # Removed the hardcoded tickvals
         hovermode="closest"
     )
     
