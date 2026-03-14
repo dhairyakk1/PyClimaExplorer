@@ -3,6 +3,7 @@ import streamlit as st
 import xarray as xr
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.figure_factory as ff # NEW: Required for Wind Arrows
 import pandas as pd
 import numpy as np
 
@@ -52,10 +53,10 @@ def load_data():
             
     if "U" in ds and "V" in ds:
         ds["Wind Speed"] = np.sqrt(ds.U**2 + ds.V**2)
-        ds = ds.drop_vars(["U", "V"]) 
+        # REMOVED the line dropping U and V so we can use them for arrows!
         
     if "Precip" in ds and ds["Precip"].max() < 1: 
-        ds["Precip"] = ds["Precip"] * 1000 # Convert to mm
+        ds["Precip"] = ds["Precip"] * 1000 
         
     return ds
 
@@ -80,27 +81,15 @@ try:
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
     # --- 3. CUSTOM COLOR SCALES & LOGIC ---
-    # TEMPERATURE: ICON Weather Model Match (-40 to 50)
     temp_custom_scale = [
-        [0.000, "#011959"],  # Deep Arctic Blue (-40°C)
-        [0.333, "#105a96"],  # Ocean Blue (-10°C)
-        [0.444, "#3ba3a1"],  # Teal/Cyan (0°C)
-        [0.556, "#a3d977"],  # Pale Yellow-Green (10°C)
-        [0.667, "#f5d448"],  # Golden Yellow (20°C)
-        [0.778, "#f09a39"],  # Deep Orange (30°C)
-        [0.889, "#c12128"],  # Crimson Red (40°C)
-        [1.000, "#5b0b1e"]   # Dark Burgundy/Purple (50°C+)
+        [0.000, "#011959"], [0.333, "#105a96"], [0.444, "#3ba3a1"], 
+        [0.556, "#a3d977"], [0.667, "#f5d448"], [0.778, "#f09a39"], 
+        [0.889, "#c12128"], [1.000, "#5b0b1e"]   
     ]
 
-    # PRECIPITATION: Front-loaded, non-linear scale so even light rain shows up clearly
     precip_custom_scale = [
-        [0.00, "#FFFFFF"],   # 0 mm (White/Dry)
-        [0.05, "#E0F7FA"],   # Trace Rain (Pale Blue)
-        [0.15, "#80DEEA"],   # Light Rain (Cyan)
-        [0.30, "#26C6DA"],   # Moderate Rain
-        [0.50, "#00ACC1"],   # Heavy Rain
-        [0.75, "#00838F"],   # Very Heavy Rain
-        [1.00, "#01579B"]    # Extreme Rain (Darkest Blue)
+        [0.00, "#FFFFFF"], [0.05, "#E0F7FA"], [0.15, "#80DEEA"], 
+        [0.30, "#26C6DA"], [0.50, "#00ACC1"], [0.75, "#00838F"], [1.00, "#01579B"]
     ]
 
     cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": precip_custom_scale}
@@ -113,13 +102,10 @@ try:
         
     data_slice = ds[param].sel(time=selected_time, method="nearest")
     
-    # DYNAMIC SCALING LOGIC
     if param == "Temp":
         z_min, z_max = (-40, 50)
     elif param == "Precip":
         z_min = 0
-        # Dynamically set max to 60% of the month's absolute highest pixel. 
-        # This prevents one crazy storm pixel from washing out the entire globe.
         current_max = float(data_slice.max())
         z_max = current_max * 0.6 if current_max > 0 else 10 
     else:
@@ -135,6 +121,30 @@ try:
         zmax=z_max
     )
     
+    # 🌬️ ADDING WIND ARROWS (QUIVER PLOT)
+    if param == "Wind Speed" and "U" in ds and "V" in ds:
+        lat_key = 'lat' if 'lat' in ds.coords else 'latitude'
+        lon_key = 'lon' if 'lon' in ds.coords else 'longitude'
+        
+        # Dynamically calculate how many pixels to skip so we draw a clean grid of ~40 arrows
+        skip_x = max(1, len(ds[lon_key]) // 40)
+        skip_y = max(1, len(ds[lat_key]) // 40)
+        
+        u_slice = ds["U"].sel(time=selected_time, method="nearest")[::skip_y, ::skip_x]
+        v_slice = ds["V"].sel(time=selected_time, method="nearest")[::skip_y, ::skip_x]
+        
+        X, Y = np.meshgrid(u_slice[lon_key].values, u_slice[lat_key].values)
+        
+        # Create the arrows
+        quiver_fig = ff.create_quiver(
+            X, Y, u_slice.values, v_slice.values,
+            scale=0.15,               # Arrow length multiplier
+            arrow_scale=0.3,          # Arrowhead size
+            name='Wind Direction',
+            line=dict(color='rgba(255, 255, 255, 0.7)', width=1.5) # Semi-transparent white
+        )
+        fig.add_traces(quiver_fig.data)
+
     # TARGET RETICLE
     fig.add_trace(go.Scatter(
         x=[st.session_state.lon], y=[st.session_state.lat],
@@ -157,7 +167,7 @@ try:
         height=540,
         xaxis={"showgrid": False, "zeroline": False, "visible": False}, 
         yaxis={"showgrid": False, "zeroline": False, "visible": False}, 
-        coloraxis_colorbar=dict(title=units.get(param, "")), # Removed the hardcoded tickvals
+        coloraxis_colorbar=dict(title=units.get(param, "")),
         hovermode="closest"
     )
     
