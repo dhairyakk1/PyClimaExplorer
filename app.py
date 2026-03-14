@@ -235,6 +235,16 @@ try:
                 framecolor="rgba(0,0,0,0)"
             )
             
+            # 🎯 FIXED 3D BEACON FOR PRECIPITATION
+            globe_fig.add_trace(go.Scattergeo(
+                lon=[st.session_state.lon],
+                lat=[st.session_state.lat],
+                mode="markers",
+                marker=dict(size=10, color="#FF0000", line=dict(color="#FFFFFF", width=1.5)),
+                showlegend=False,
+                hoverinfo="skip"
+            ))
+            
         else:
             # 🎯 CONTINUOUS SURFACE FOR TEMP / WIND
             lon_grid, lat_grid = np.meshgrid(data_slice.lon.values, data_slice.lat.values)
@@ -271,22 +281,20 @@ try:
                 )
             )
 
-        # 🎯 UNIVERSAL 3D BEACON
-        beacon_kwargs = {}
-        if param == "Precipitation":
-            beacon_kwargs = dict(type="scattergeo", lon=[st.session_state.lon], lat=[st.session_state.lat])
-        else:
+            # 🎯 FIXED 3D BEACON FOR TEMP/WIND
             mx = 1.02 * np.cos(np.radians(st.session_state.lat)) * np.cos(np.radians(st.session_state.lon))
             my = 1.02 * np.cos(np.radians(st.session_state.lat)) * np.sin(np.radians(st.session_state.lon))
             mz = 1.02 * np.sin(np.radians(st.session_state.lat))
-            beacon_kwargs = dict(type="scatter3d", x=[mx], y=[my], z=[mz])
             
-        globe_fig.add_trace(go.Scatter(**beacon_kwargs) if param == "Precipitation" else go.Scatter3d(**beacon_kwargs, mode="markers", marker=dict(size=6, color="#FF0000", symbol="circle", line=dict(color="#FFFFFF", width=1)), showlegend=False, hoverinfo="skip"))
-        
-        # Override precipitation beacon specifically because go.Scattergeo syntax differs slightly
-        if param == "Precipitation":
-            globe_fig.add_trace(go.Scattergeo(lon=[st.session_state.lon], lat=[st.session_state.lat], mode="markers", marker=dict(size=10, color="#FF0000", line=dict(color="#FFFFFF", width=1.5)), showlegend=False, hoverinfo="skip"))
+            globe_fig.add_trace(go.Scatter3d(
+                x=[mx], y=[my], z=[mz],
+                mode="markers",
+                marker=dict(size=6, color="#FF0000", symbol="circle", line=dict(color="#FFFFFF", width=1)),
+                showlegend=False,
+                hoverinfo="skip"
+            ))
 
+        # Apply transparent backgrounds
         globe_fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, b=0, t=0), height=650)
         st.plotly_chart(globe_fig, use_container_width=True)
 
