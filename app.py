@@ -18,11 +18,11 @@ st.markdown("""
         font-family: 'Inter', 'Segoe UI', sans-serif;
     }
     
-    /* Hide Streamlit Clutter */
+    /* Hide Streamlit Clutter BUT keep the sidebar toggle */
     #MainMenu {visibility: hidden;}
     .stDeployButton {display:none;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    header {background-color: transparent !important;} /* Makes header invisible but keeps the > button! */
     
     /* Scrollbar Polish */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -62,7 +62,7 @@ def sync_sidebar():
     st.session_state.lat = st.session_state.sidebar_lat
     st.session_state.lon = st.session_state.sidebar_lon
 
-# --- 2. DATA ENGINE (Untouched) ---
+# --- 2. DATA ENGINE ---
 @st.cache_resource(show_spinner="Booting Climate Engine...")
 def load_climate_data():
     file_path = "dataset_lite.nc"
@@ -140,7 +140,6 @@ try:
     # --- 4. MAIN DASHBOARD AREA ---
     st.markdown(f"<h2 style='text-align: center; color: #FFFFFF; font-weight: 300; letter-spacing: 2px;'>GLOBAL <span style='color: #00d4ff; font-weight: bold;'>{param.upper()}</span> DYNAMICS</h2>", unsafe_allow_html=True)
     
-    # 4A. THE MAP CONTAINER
     with st.container():
         data_slice = ds[param].sel(time=selected_time, method="nearest").compute()
         if param == "Temp" and data_slice.max() > 100: data_slice = data_slice - 273.15
@@ -152,16 +151,25 @@ try:
             color_continuous_scale=cmaps.get(param, "Viridis"), origin="lower", aspect="auto"
         )
         
-        fig.add_trace(go.Scatter(x=[st.session_state.lon], y=[st.session_state.lat], mode="markers", marker=dict(color="#ff0055", size=8), showlegend=False, hoverinfo="skip"))
+        # --- THE RED TARGET-LOCK CROSSHAIR ---
+        # 1. Hollow Red Circle
+        fig.add_trace(go.Scatter(
+            x=[st.session_state.lon], y=[st.session_state.lat], 
+            mode="markers", 
+            marker=dict(symbol="circle-open", size=14, line=dict(color="#FF0000", width=1.5)), 
+            showlegend=False, hoverinfo="skip"
+        ))
         
-        gap, length = 3.0, 10.0
-        l_style = dict(color="#00ffff", width=2)
+        # 2. Thin Red Lines touching the circle diameter
+        gap, length = 2.2, 12.0  # Gap matches the circle's radius
+        l_style = dict(color="#FF0000", width=1)
+        
         fig.add_shape(type="line", x0=st.session_state.lon, x1=st.session_state.lon, y0=st.session_state.lat + gap, y1=st.session_state.lat + length, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon, x1=st.session_state.lon, y0=st.session_state.lat - gap, y1=st.session_state.lat - length, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon + gap, x1=st.session_state.lon + length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon - gap, x1=st.session_state.lon - length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
+        # ---------------------------------------------
         
-        # Pro Plotly Styling (Transparent backgrounds)
         fig.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             margin={"l": 0, "r": 0, "b": 0, "t": 10}, height=550, 
@@ -170,7 +178,7 @@ try:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("<br>", unsafe_allow_html=True) # Spacing
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # 4B. METRICS & TREND CONTAINER
     point_series = ds[param].sel(lat=st.session_state.lat, lon=st.session_state.lon, method="nearest").compute()
@@ -184,17 +192,16 @@ try:
     
     with c_metrics:
         st.metric(f"TARGET {param.upper()}", f"{current_val:.1f} {metric_unit}")
-        st.markdown("<br>", unsafe_allow_html=True) # Spacing between cards
+        st.markdown("<br>", unsafe_allow_html=True)
         st.metric("TIMELINE PEAK", f"{float(point_series.max()):.1f} {metric_unit}")
         
     with c_graph:
         trend_df = point_series.to_dataframe().reset_index()
         trend_fig = px.line(trend_df, x="time", y=param)
         
-        # Pro Graph Styling
         trend_fig.update_traces(
             line=dict(color="#00ffff", width=2), 
-            fill='tozeroy', fillcolor="rgba(0, 212, 255, 0.1)", # Adds a cool glowing fill under the line
+            fill='tozeroy', fillcolor="rgba(0, 212, 255, 0.1)",
             marker=dict(size=4, color="#ff0055")
         )
         trend_fig.update_layout(
