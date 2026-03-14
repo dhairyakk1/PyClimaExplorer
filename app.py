@@ -44,6 +44,13 @@ def load_data():
     if time_name and time_name != "time":
         ds = ds.rename({time_name: "time"})
 
+    # 🌍 THE FIX: ALIGN LONGITUDE TO -180 TO +180
+    # This prevents negative coordinates (like the Americas) from plotting off-screen
+    lon_name = 'lon' if 'lon' in ds.coords else 'longitude'
+    if lon_name in ds.coords and float(ds[lon_name].max()) > 180:
+        ds.coords[lon_name] = (ds.coords[lon_name] + 180) % 360 - 180
+        ds = ds.sortby(ds[lon_name])
+
     rename_map = {"t2m": "Temp", "u10": "U", "v10": "V", "tp": "Precip"}
     ds = ds.rename({k: v for k, v in rename_map.items() if k in ds})
     
@@ -74,7 +81,6 @@ try:
 
     st.sidebar.divider()
     
-    # 🌍 NEW FEATURE: GLOBAL QUICK-JUMP
     st.sidebar.subheader("📍 Location Targeting")
     
     PRESET_LOCATIONS = {
@@ -95,7 +101,6 @@ try:
         st.session_state.lat = PRESET_LOCATIONS[location_choice][0]
         st.session_state.lon = PRESET_LOCATIONS[location_choice][1]
 
-    # Manual coordinate entry perfectly synced
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
@@ -140,7 +145,6 @@ try:
         zmax=z_max
     )
     
-    # TARGET RETICLE
     fig.add_trace(go.Scatter(
         x=[st.session_state.lon], y=[st.session_state.lat],
         mode="markers",
@@ -166,7 +170,6 @@ try:
         hovermode="closest"
     )
     
-    # Render map cleanly without the broken click-listener
     st.plotly_chart(fig, use_container_width=True)
 
     # --- 5. BOTTOM SECTION: STATS & TREND ---
