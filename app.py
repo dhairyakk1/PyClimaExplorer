@@ -32,11 +32,11 @@ def sync_sidebar():
 # --- 2. DATA ENGINE ---
 @st.cache_resource(show_spinner="Syncing Climate Data Engine...")
 def load_climate_data():
-    possible_paths = ["dataset_final.nc", "data/dataset_final.nc"]
+    possible_paths = ["dataset_lite.nc", "data/dataset_lite.nc"]
     file_path = next((p for p in possible_paths if os.path.exists(p)), None)
     
     if not file_path:
-        st.error("🚨 CRITICAL: 'dataset_final.nc' not found. Ensure it is uploaded to your GitHub root.")
+        st.error("🚨 CRITICAL: 'dataset_lite.nc' not found. Ensure it is uploaded to your GitHub root.")
         st.stop()
         
     ds = xr.open_dataset(file_path, engine="netcdf4", chunks={'time': 1})
