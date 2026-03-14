@@ -52,7 +52,7 @@ def load_data():
             
     if "U" in ds and "V" in ds:
         ds["Wind Speed"] = np.sqrt(ds.U**2 + ds.V**2)
-        ds = ds.drop_vars(["U", "V"]) # Memory optimization restored!
+        ds = ds.drop_vars(["U", "V"]) 
         
     if "Precip" in ds and ds["Precip"].max() < 1: 
         ds["Precip"] = ds["Precip"] * 1000 
@@ -73,13 +73,33 @@ try:
                                              format_func=lambda x: x.strftime("%b %Y"))
 
     st.sidebar.divider()
-    st.sidebar.subheader("📍 Regional Focus")
-    st.sidebar.markdown("<span style='color:#a8b2c1; font-size:0.9em;'><i>Click map or adjust sliders:</i></span>", unsafe_allow_html=True)
     
+    # 🌍 NEW FEATURE: GLOBAL QUICK-JUMP
+    st.sidebar.subheader("📍 Location Targeting")
+    
+    PRESET_LOCATIONS = {
+        "Custom Coordinates": None,
+        "Mumbai, India": (19.0, 72.5),
+        "Delhi, India": (28.5, 77.0),
+        "London, UK": (51.5, 0.0),
+        "New York, USA": (40.5, -74.0),
+        "Tokyo, Japan": (35.5, 139.5),
+        "Sydney, Australia": (-34.0, 151.0),
+        "Sahara Desert": (23.5, 12.0),
+        "Amazon Rainforest": (-3.0, -60.0)
+    }
+    
+    location_choice = st.sidebar.selectbox("Quick Jump to Region:", list(PRESET_LOCATIONS.keys()))
+    
+    if location_choice != "Custom Coordinates":
+        st.session_state.lat = PRESET_LOCATIONS[location_choice][0]
+        st.session_state.lon = PRESET_LOCATIONS[location_choice][1]
+
+    # Manual coordinate entry perfectly synced
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
-    # --- 3. CUSTOM COLOR SCALES & LOGIC ---
+    # --- 3. CUSTOM COLOR SCALES ---
     temp_custom_scale = [
         [0.000, "#011959"], [0.333, "#105a96"], [0.444, "#3ba3a1"], 
         [0.556, "#a3d977"], [0.667, "#f5d448"], [0.778, "#f09a39"], 
@@ -119,7 +139,7 @@ try:
         zmin=z_min,
         zmax=z_max
     )
-
+    
     # TARGET RETICLE
     fig.add_trace(go.Scatter(
         x=[st.session_state.lon], y=[st.session_state.lat],
@@ -146,22 +166,8 @@ try:
         hovermode="closest"
     )
     
-    map_event = st.plotly_chart(
-        fig, 
-        use_container_width=True, 
-        on_select="rerun",       
-        selection_mode="points"  
-    )
-
-    if map_event and map_event.selection and map_event.selection.points:
-        clicked_lon = float(map_event.selection.points[0]["x"])
-        clicked_lat = float(map_event.selection.points[0]["y"])
-        
-        if clicked_lon != st.session_state.lon or clicked_lat != st.session_state.lat:
-            st.session_state.lon = clicked_lon
-            st.session_state.lat = clicked_lat
-            st.toast(f"Target Acquired: Lat {clicked_lat:.1f}, Lon {clicked_lon:.1f}", icon="🎯")
-            st.rerun()
+    # Render map cleanly without the broken click-listener
+    st.plotly_chart(fig, use_container_width=True)
 
     # --- 5. BOTTOM SECTION: STATS & TREND ---
     st.divider()
