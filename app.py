@@ -133,8 +133,8 @@ try:
     # --- UI & COLOR SCALES ---
     temp_scale = [[0.0, "#011959"], [0.33, "#105a96"], [0.55, "#3ba3a1"], [0.77, "#f09a39"], [1.0, "#5b0b1e"]]
     
-    # 🎯 UPDATED PRECIPITATION SCALE (White Base -> Deep Blue Rain)
-    precip_scale = [[0.0, "#FFFFFF"], [0.15, "#BBDEFB"], [0.50, "#1E88E5"], [1.00, "#0D47A1"]]
+    # 🎯 SENSITIVE PRECIPITATION SCALE (Ramps up to blue much faster)
+    precip_scale = [[0.0, "#FFFFFF"], [0.05, "#BBDEFB"], [0.20, "#1E88E5"], [1.00, "#0D47A1"]]
     
     cmaps = {"Temp": temp_scale, "Wind Speed": "Viridis", "Precip": precip_scale}
     units = {"Temp": "Temperature (C)", "Wind Speed": "Wind Speed (m/s)", "Precip": "Precipitation (mm)"}
@@ -148,9 +148,12 @@ try:
         if param == "Precip" and data_slice.max() < 0.1: data_slice = data_slice * 1000
         data_slice.name = units[param]
         
+        # 🎯 HARD-LOCKING SCALES
         z_min, z_max = None, None
         if param == "Temp":
             z_min, z_max = -40, 45 
+        elif param == "Precip":
+            z_min, z_max = 0, 25  # Caps rain map at 25mm so average rainfall actually shows up as blue
 
         fig = px.imshow(
             data_slice, x=data_slice.lon, y=data_slice.lat, 
@@ -158,7 +161,7 @@ try:
             zmin=z_min, zmax=z_max 
         )
         
-        # 🎯 BRIGHT RED TARGET-LOCK CROSSHAIR (Thicker stroke for visibility)
+        # BRIGHT RED TARGET-LOCK CROSSHAIR
         fig.add_trace(go.Scatter(
             x=[st.session_state.lon], y=[st.session_state.lat], 
             mode="markers", 
@@ -173,7 +176,7 @@ try:
         fig.add_shape(type="line", x0=st.session_state.lon + gap, x1=st.session_state.lon + length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon - gap, x1=st.session_state.lon - length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         
-        # 🎯 FIXED COLORBAR TITLES & DENSITY
+        # FIXED COLORBAR TITLES & DENSITY
         cbar_settings = dict(
             title=dict(
                 text=f"<b>{units[param]}</b>",
@@ -182,7 +185,6 @@ try:
             tickfont=dict(color="#FFF")
         )
         
-        # Force multiples of 10 for the Temperature scale
         if param == "Temp":
             cbar_settings["tickmode"] = "linear"
             cbar_settings["tick0"] = 0
