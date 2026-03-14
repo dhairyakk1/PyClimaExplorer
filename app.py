@@ -95,7 +95,6 @@ try:
     ]
 
     cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": "Blues"}
-    units = {"Temp": "°C", "Wind Speed": "m/s", "Precip": "mm"}: "Blues"}
     units = {"Temp": "°C", "Wind Speed": "m/s", "Precip": "mm"}
     # --- 4. TOP SECTION: MAP (80% Height) ---
     if param not in ds:
