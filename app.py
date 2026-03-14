@@ -17,7 +17,7 @@ st.markdown("""
     [data-testid="stMetricValue"] { font-size: 1.8rem; color: #00d4ff; font-weight: bold; }
     .stPlotlyChart { margin-bottom: -15px; }
     
-    /* THE FIX: Target the annoying default buttons directly, but leave the header intact! */
+    /* Hide the default Streamlit menus but keep the sidebar toggle button visible */
     #MainMenu {visibility: hidden;}
     .stDeployButton {display:none;}
     footer {visibility: hidden;}
@@ -83,56 +83,34 @@ try:
 
     st.sidebar.divider()
     
-    # 🌍 UPGRADED FEATURE: CONTINENT-WISE QUICK-JUMP
+    # 🌍 FLAT LIST: BUG-PROOF QUICK JUMP
     st.sidebar.subheader("📍 Location Targeting")
     
     nav_mode = st.sidebar.radio("Navigation Method", ["Quick Jump Directory", "Custom Coordinates"])
     
     if nav_mode == "Quick Jump Directory":
-        REGION_PRESETS = {
-            "🌎 North America": {
-                "New York, USA": (40.7, -74.0),
-                "Los Angeles, USA": (34.0, -118.2),
-                "Toronto, Canada": (43.7, -79.4),
-                "Mexico City, Mexico": (19.4, -99.1)
-            },
-            "🌍 South America": {
-                "Amazon Rainforest": (-3.0, -60.0),
-                "São Paulo, Brazil": (-23.5, -46.6),
-                "Buenos Aires, Argentina": (-34.6, -58.4),
-                "Santiago, Chile": (-33.4, -70.6)
-            },
-            "🌍 Europe": {
-                "London, UK": (51.5, -0.1),
-                "Paris, France": (48.8, 2.3),
-                "Berlin, Germany": (52.5, 13.4),
-                "Rome, Italy": (41.9, 12.5)
-            },
-            "🌍 Africa": {
-                "Sahara Desert": (23.5, 12.0),
-                "Cairo, Egypt": (30.0, 31.2),
-                "Lagos, Nigeria": (6.5, 3.4),
-                "Cape Town, South Africa": (-33.9, 18.4)
-            },
-            "🌏 Asia": {
-                "Mumbai, India": (19.0, 72.8),
-                "Delhi, India": (28.6, 77.2),
-                "Tokyo, Japan": (35.6, 139.6),
-                "Beijing, China": (39.9, 116.4),
-                "Dubai, UAE": (25.2, 55.2)
-            },
-            "🌏 Oceania": {
-                "Sydney, Australia": (-33.8, 151.2),
-                "Melbourne, Australia": (-37.8, 144.9),
-                "Auckland, New Zealand": (-36.8, 174.7)
-            }
+        GLOBAL_CITIES = {
+            "Amazon Rainforest": (-3.0, -60.0),
+            "Beijing, China": (39.9, 116.4),
+            "Buenos Aires, Argentina": (-34.6, -58.4),
+            "Cape Town, South Africa": (-33.9, 18.4),
+            "Delhi, India": (28.6, 77.2),
+            "London, UK": (51.5, -0.1),
+            "Los Angeles, USA": (34.0, -118.2),
+            "Mexico City, Mexico": (19.4, -99.1),
+            "Mumbai, India": (19.0, 72.8),
+            "New York, USA": (40.7, -74.0),
+            "Paris, France": (48.8, 2.3),
+            "Rome, Italy": (41.9, 12.5),
+            "Sahara Desert": (23.5, 12.0),
+            "Sydney, Australia": (-33.8, 151.2),
+            "Tokyo, Japan": (35.6, 139.6)
         }
         
-        region = st.sidebar.selectbox("Select Continent:", list(REGION_PRESETS.keys()))
-        city = st.sidebar.selectbox("Select Location:", list(REGION_PRESETS[region].keys()))
+        city = st.sidebar.selectbox("Select Location:", list(GLOBAL_CITIES.keys()))
         
-        st.session_state.lat = REGION_PRESETS[region][city][0]
-        st.session_state.lon = REGION_PRESETS[region][city][1]
+        st.session_state.lat = GLOBAL_CITIES[city][0]
+        st.session_state.lon = GLOBAL_CITIES[city][1]
 
     # Manual coordinate entry perfectly synced
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
@@ -179,6 +157,7 @@ try:
         zmax=z_max
     )
     
+    # TARGET RETICLE
     fig.add_trace(go.Scatter(
         x=[st.session_state.lon], y=[st.session_state.lat],
         mode="markers",
