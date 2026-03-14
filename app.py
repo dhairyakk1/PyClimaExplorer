@@ -3,7 +3,6 @@ import streamlit as st
 import xarray as xr
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.figure_factory as ff # NEW: Required for Wind Arrows
 import pandas as pd
 import numpy as np
 
@@ -53,7 +52,7 @@ def load_data():
             
     if "U" in ds and "V" in ds:
         ds["Wind Speed"] = np.sqrt(ds.U**2 + ds.V**2)
-        # REMOVED the line dropping U and V so we can use them for arrows!
+        ds = ds.drop_vars(["U", "V"]) # Memory optimization restored!
         
     if "Precip" in ds and ds["Precip"].max() < 1: 
         ds["Precip"] = ds["Precip"] * 1000 
@@ -120,30 +119,6 @@ try:
         zmin=z_min,
         zmax=z_max
     )
-    
-    # 🌬️ ADDING WIND ARROWS (QUIVER PLOT)
-    if param == "Wind Speed" and "U" in ds and "V" in ds:
-        lat_key = 'lat' if 'lat' in ds.coords else 'latitude'
-        lon_key = 'lon' if 'lon' in ds.coords else 'longitude'
-        
-        # Dynamically calculate how many pixels to skip so we draw a clean grid of ~40 arrows
-        skip_x = max(1, len(ds[lon_key]) // 40)
-        skip_y = max(1, len(ds[lat_key]) // 40)
-        
-        u_slice = ds["U"].sel(time=selected_time, method="nearest")[::skip_y, ::skip_x]
-        v_slice = ds["V"].sel(time=selected_time, method="nearest")[::skip_y, ::skip_x]
-        
-        X, Y = np.meshgrid(u_slice[lon_key].values, u_slice[lat_key].values)
-        
-        # Create the arrows
-        quiver_fig = ff.create_quiver(
-            X, Y, u_slice.values, v_slice.values,
-            scale=0.15,               # Arrow length multiplier
-            arrow_scale=0.3,          # Arrowhead size
-            name='Wind Direction',
-            line=dict(color='rgba(255, 255, 255, 0.7)', width=1.5) # Semi-transparent white
-        )
-        fig.add_traces(quiver_fig.data)
 
     # TARGET RETICLE
     fig.add_trace(go.Scatter(
