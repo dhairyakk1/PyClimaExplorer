@@ -132,51 +132,34 @@ try:
 
     # --- UI & COLOR SCALES ---
     temp_scale = [[0.0, "#011959"], [0.33, "#105a96"], [0.55, "#3ba3a1"], [0.77, "#f09a39"], [1.0, "#5b0b1e"]]
-    
-    # 🎯 EXTREME PRECIPITATION SCALE
-    # Compresses old 0-25mm into the 0.0-0.5 normalized range, then adds purple up to 1.0 (50mm)
-    precip_scale = [
-        [0.000, "#FFFFFF"], # 0 mm
-        [0.025, "#BBDEFB"], # 1.25 mm
-        [0.100, "#1E88E5"], # 5.0 mm
-        [0.500, "#0D47A1"], # 25.0 mm (Deep Blue)
-        [1.000, "#6A1B9A"]  # 50.0 mm (Extreme Purple)
-    ]
-    
+    precip_scale = [[0.000, "#FFFFFF"], [0.025, "#BBDEFB"], [0.100, "#1E88E5"], [0.500, "#0D47A1"], [1.000, "#6A1B9A"]]
     cmaps = {"Temperature": temp_scale, "Wind Speed": "Viridis", "Precipitation": precip_scale}
     units = {"Temperature": "Temperature (C)", "Wind Speed": "Wind Speed (m/s)", "Precipitation": "Precipitation (mm)"}
 
-    # --- 4. MAIN DASHBOARD AREA ---
+    # Extract single shared data slice for 2D, Metrics, and 3D Globe
+    data_slice = ds[param].sel(time=selected_time, method="nearest").compute()
+    if param == "Temperature" and data_slice.max() > 100: data_slice = data_slice - 273.15
+    if param == "Precipitation" and data_slice.max() < 0.1: data_slice = data_slice * 1000
+    data_slice.name = units[param]
+    
+    z_min, z_max = None, None
+    if param == "Temperature":
+        z_min, z_max = -40, 45 
+    elif param == "Precipitation":
+        z_min, z_max = 0, 50  
+
+    # --- 4. TOP SECTION: 2D MAP ---
     st.markdown(f"<h2 style='text-align: center; color: #FFFFFF; font-weight: 300; letter-spacing: 2px;'>GLOBAL <span style='color: #00d4ff; font-weight: bold;'>{param.upper()}</span> DYNAMICS</h2>", unsafe_allow_html=True)
     
     with st.container():
-        data_slice = ds[param].sel(time=selected_time, method="nearest").compute()
-        
-        if param == "Temperature" and data_slice.max() > 100: data_slice = data_slice - 273.15
-        if param == "Precipitation" and data_slice.max() < 0.1: data_slice = data_slice * 1000
-        data_slice.name = units[param]
-        
-        # 🎯 HARD-LOCKING SCALES TO 50mm MAX
-        z_min, z_max = None, None
-        if param == "Temperature":
-            z_min, z_max = -40, 45 
-        elif param == "Precipitation":
-            z_min, z_max = 0, 50  
-
         fig = px.imshow(
             data_slice, x=data_slice.lon, y=data_slice.lat, 
             color_continuous_scale=cmaps.get(param, "Viridis"), origin="lower", aspect="auto",
             zmin=z_min, zmax=z_max 
         )
         
-        # BRIGHT RED TARGET-LOCK CROSSHAIR
-        fig.add_trace(go.Scatter(
-            x=[st.session_state.lon], y=[st.session_state.lat], 
-            mode="markers", 
-            marker=dict(symbol="circle-open", size=8, line=dict(color="#FF0000", width=2.5)), 
-            showlegend=False, hoverinfo="skip"
-        ))
-        
+        # 2D CROSSHAIR
+        fig.add_trace(go.Scatter(x=[st.session_state.lon], y=[st.session_state.lat], mode="markers", marker=dict(symbol="circle-open", size=8, line=dict(color="#FF0000", width=2.5)), showlegend=False, hoverinfo="skip"))
         gap, length = 1.2, 10.0 
         l_style = dict(color="#FF0000", width=1.5)
         fig.add_shape(type="line", x0=st.session_state.lon, x1=st.session_state.lon, y0=st.session_state.lat + gap, y1=st.session_state.lat + length, line=l_style)
@@ -184,32 +167,17 @@ try:
         fig.add_shape(type="line", x0=st.session_state.lon + gap, x1=st.session_state.lon + length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         fig.add_shape(type="line", x0=st.session_state.lon - gap, x1=st.session_state.lon - length, y0=st.session_state.lat, y1=st.session_state.lat, line=l_style)
         
-        cbar_settings = dict(
-            title=dict(
-                text=f"<b>{units[param]}</b>",
-                font=dict(color="#00d4ff", size=14)
-            ),
-            tickfont=dict(color="#FFF")
-        )
-        
+        cbar_settings = dict(title=dict(text=f"<b>{units[param]}</b>", font=dict(color="#00d4ff", size=14)), tickfont=dict(color="#FFF"))
         if param == "Temperature":
-            cbar_settings["tickmode"] = "linear"
-            cbar_settings["tick0"] = 0
-            cbar_settings["dtick"] = 10
+            cbar_settings.update({"tickmode": "linear", "tick0": 0, "dtick": 10})
 
-        fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            margin={"l": 0, "r": 0, "b": 0, "t": 10}, height=550, 
-            xaxis_visible=False, yaxis_visible=False,
-            coloraxis_colorbar=cbar_settings
-        )
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin={"l": 0, "r": 0, "b": 0, "t": 10}, height=550, xaxis_visible=False, yaxis_visible=False, coloraxis_colorbar=cbar_settings)
         st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 4B. METRICS & TREND CONTAINER
+    # --- 5. MIDDLE SECTION: METRICS & TREND GRAPH ---
     point_series = ds[param].sel(lat=st.session_state.lat, lon=st.session_state.lon, method="nearest").compute()
-    
     if param == "Temperature" and point_series.max() > 100: point_series = point_series - 273.15
     if param == "Precipitation" and point_series.max() < 0.1: point_series = point_series * 1000
     
@@ -217,7 +185,6 @@ try:
     metric_unit = "°C" if param == "Temperature" else ("m/s" if param == "Wind Speed" else "mm")
 
     c_metrics, c_graph = st.columns([1, 2.5])
-    
     with c_metrics:
         st.metric(f"TARGET {param.upper()}", f"{current_val:.1f} {metric_unit}")
         st.markdown("<br>", unsafe_allow_html=True)
@@ -226,19 +193,72 @@ try:
     with c_graph:
         trend_df = point_series.to_dataframe().reset_index()
         trend_fig = px.line(trend_df, x="time", y=param)
-        
-        trend_fig.update_traces(
-            line=dict(color="#00ffff", width=2), 
-            fill='tozeroy', fillcolor="rgba(0, 212, 255, 0.1)",
-            marker=dict(size=4, color="#ff0055")
-        )
-        trend_fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            height=260, margin={"l": 0, "r": 0, "b": 0, "t": 10},
-            xaxis=dict(title="", showgrid=False, tickfont=dict(color="#888")),
-            yaxis=dict(title=units[param], showgrid=True, gridcolor="rgba(255,255,255,0.05)", tickfont=dict(color="#888"))
-        )
+        trend_fig.update_traces(line=dict(color="#00ffff", width=2), fill='tozeroy', fillcolor="rgba(0, 212, 255, 0.1)", marker=dict(size=4, color="#ff0055"))
+        trend_fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=260, margin={"l": 0, "r": 0, "b": 0, "t": 10}, xaxis=dict(title="", showgrid=False, tickfont=dict(color="#888")), yaxis=dict(title=units[param], showgrid=True, gridcolor="rgba(255,255,255,0.05)", tickfont=dict(color="#888")))
         st.plotly_chart(trend_fig, use_container_width=True)
+
+    # --- 6. BOTTOM SECTION: 3D GLOBE PROJECTION ---
+    st.markdown("<br><hr><br>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center; color: #FFFFFF; font-weight: 300; letter-spacing: 2px;'>3D PLANETARY <span style='color: #00d4ff; font-weight: bold;'>PROJECTION</span></h3>", unsafe_allow_html=True)
+    
+    with st.container():
+        # Mathematics to wrap the 2D grid around a 3D sphere
+        lon_grid, lat_grid = np.meshgrid(data_slice.lon.values, data_slice.lat.values)
+        lon_rad = np.radians(lon_grid)
+        lat_rad = np.radians(lat_grid)
+        
+        x_sphere = np.cos(lat_rad) * np.cos(lon_rad)
+        y_sphere = np.cos(lat_rad) * np.sin(lon_rad)
+        z_sphere = np.sin(lat_rad)
+        
+        globe_fig = go.Figure()
+        
+        # Apply the exact same visual parameters to the 3D surface
+        surface_kwargs = dict(
+            x=x_sphere, y=y_sphere, z=z_sphere,
+            surfacecolor=data_slice.values,
+            colorscale=cmaps.get(param, "Viridis"),
+            showscale=False, # Colorbar already handled by the 2D map above
+            lighting=dict(ambient=0.7, diffuse=0.8, roughness=0.5, specular=0.1, fresnel=0.2)
+        )
+        if z_min is not None and z_max is not None:
+            surface_kwargs["cmin"] = z_min
+            surface_kwargs["cmax"] = z_max
+            
+        globe_fig.add_trace(go.Surface(**surface_kwargs))
+        
+        # 3D Target Marker Math
+        m_lat_rad = np.radians(st.session_state.lat)
+        m_lon_rad = np.radians(st.session_state.lon)
+        mx = 1.02 * np.cos(m_lat_rad) * np.cos(m_lon_rad) # 1.02 floats it slightly above the surface
+        my = 1.02 * np.cos(m_lat_rad) * np.sin(m_lon_rad)
+        mz = 1.02 * np.sin(m_lat_rad)
+        
+        # 3D Beacon
+        globe_fig.add_trace(go.Scatter3d(
+            x=[mx], y=[my], z=[mz],
+            mode="markers",
+            marker=dict(size=6, color="#FF0000", symbol="circle", line=dict(color="#FFFFFF", width=1)),
+            showlegend=False, hoverinfo="skip"
+        ))
+        
+        # Auto-aim the camera at the selected target
+        cam_x, cam_y, cam_z = mx * 1.5, my * 1.5, mz * 1.5
+        
+        globe_fig.update_layout(
+            scene=dict(
+                xaxis=dict(showbackground=False, visible=False),
+                yaxis=dict(showbackground=False, visible=False),
+                zaxis=dict(showbackground=False, visible=False),
+                bgcolor="rgba(0,0,0,0)",
+                camera=dict(eye=dict(x=cam_x, y=cam_y, z=cam_z))
+            ),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=0, r=0, b=0, t=0),
+            height=650
+        )
+        st.plotly_chart(globe_fig, use_container_width=True)
 
 except Exception as e:
     st.error(f"System Offline: {e}")
