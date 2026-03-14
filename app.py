@@ -79,19 +79,17 @@ try:
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
-  # --- 3. CUSTOM COLOR SCALES (NO GREEN, CINEMATIC THERMAL) ---
-    # Total scale spans 90 degrees (-40 to 50). 
+  # --- 3. CUSTOM COLOR SCALES (ICON WEATHER MODEL MATCH) ---
+    # Total scale spans 90 degrees (-40 to 50).
     temp_custom_scale = [
-        [0.000, "#000033"],  # Deep Space Navy (-40°C)
-        [0.222, "#00008B"],  # Dark Blue (-20°C)
-        [0.444, "#0000FF"],  # Standard Blue (0°C)
-        [0.556, "#87CEEB"],  # Sky Blue Starts (10°C)
-        [0.667, "#ADD8E6"],  # Light Sky Blue Ends (20°C)
-        [0.744, "#FFD700"],  # Yellowish/Gold (Exactly 27°C)
-        [0.833, "#FFA500"],  # Orange (Exactly 35°C)
-        [0.889, "#FF4500"],  # Reddish Orange (Exactly 40°C)
-        [0.944, "#FF0000"],  # Bright Red (Exactly 45°C)
-        [1.000, "#8B0000"]   # Deep Red (50°C and above)
+        [0.000, "#011959"],  # Deep Arctic Blue (-40°C)
+        [0.333, "#105a96"],  # Ocean Blue (-10°C)
+        [0.444, "#3ba3a1"],  # Teal/Cyan (0°C - matches the cool oceans in your image)
+        [0.556, "#a3d977"],  # Pale Yellow-Green (10°C - matches Southern Africa/Europe)
+        [0.667, "#f5d448"],  # Golden Yellow (20°C)
+        [0.778, "#f09a39"],  # Deep Orange (30°C - matches India/Middle East borders)
+        [0.889, "#c12128"],  # Crimson Red (40°C - matches the Sahara Desert)
+        [1.000, "#5b0b1e"]   # Dark Burgundy/Purple (50°C+ - absolute hottest cores)
     ]
 
     cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": "Blues"}
