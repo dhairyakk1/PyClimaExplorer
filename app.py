@@ -79,22 +79,21 @@ try:
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
-    # --- 3. CUSTOM COLOR SCALES (THERMOGRAPHIC MATCH) ---
-    # This precisely recreates the Blue -> Cyan -> Green -> Yellow -> Orange -> Red from your image
+    # --- 3. CUSTOM COLOR SCALES (GREEN CENTERED AT 25°C) ---
+    # Total scale spans 90 degrees (-40 to 50). 
+    # 25°C is exactly at position 0.72 (65/90)
     temp_custom_scale = [
         [0.00, "#000055"],  # Deep Space Blue (-40°C)
-        [0.15, "#0000FF"],  # Pure Blue
-        [0.30, "#00FFFF"],  # Cyan
-        [0.45, "#00FF00"],  # Green (Around 0°C)
-        [0.60, "#FFFF00"],  # Yellow (Around 14°C)
-        [0.75, "#FFA500"],  # Orange (Around 27°C)
-        [0.90, "#FF4500"],  # Orange-Red
+        [0.33, "#0000FF"],  # Pure Blue (-10°C)
+        [0.55, "#00FFFF"],  # Cyan (10°C)
+        [0.72, "#00FF00"],  # Green (Exactly 25°C)
+        [0.80, "#FFFF00"],  # Yellow (32°C)
+        [0.88, "#FFA500"],  # Orange (40°C)
         [1.00, "#FF0000"]   # Bright Red (50°C)
     ]
 
     cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": "Blues"}
     units = {"Temp": "°C", "Wind Speed": "m/s", "Precip": "mm"}
-
     # --- 4. TOP SECTION: MAP (80% Height) ---
     if param not in ds:
         st.error(f"Parameter '{param}' not found in the dataset.")
