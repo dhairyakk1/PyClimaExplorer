@@ -40,14 +40,16 @@ def load_data():
         
     ds = xr.open_dataset(file_path)
     
-    # Teammate's slick universal time finder
+    # Universal Time Finder
     time_name = next((c for c in ds.coords if "time" in str(c).lower()), None)
     if time_name and time_name != "time":
         ds = ds.rename({time_name: "time"})
 
+    # Map variables to friendly names
     rename_map = {"t2m": "Temp", "u10": "U", "v10": "V", "tp": "Precip"}
     ds = ds.rename({k: v for k, v in rename_map.items() if k in ds})
     
+    # Conversions
     if "Temp" in ds and ds["Temp"].max() > 100: 
         ds["Temp"] = ds["Temp"] - 273.15
             
@@ -80,11 +82,13 @@ try:
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
-    # --- 3. CUSTOM COLOR SCALES & LOGIC ---
+    # --- 3. CUSTOM COLOR SCALES (TEAMMATE'S UPGRADE) ---
     temp_custom_scale = [
         [0.0, "#00008B"],   # -40C: Dark Blue
-        [0.44, "#87CEEB"],  # 0C: Sky Blue
-        [0.61, "#FFFFFF"],  # 15C: White
+        [0.28, "#87CEEB"],  # -15C: Sky Blue (transition)
+        [0.44, "#FFFFFF"],  # 0C: Pure White
+        [0.61, "#FFFF00"],  # 15C: Yellow
+        [0.83, "#FFA500"],  # 35C: Orange
         [1.0, "#FF0000"]    # 50C: Total Red
     ]
 
@@ -98,7 +102,7 @@ try:
         
     data_slice = ds[param].sel(time=selected_time, method="nearest")
     
-    # Teammate's realistic scaling logic
+    # Range Locks for Consistency
     z_min, z_max = (-40, 50) if param == "Temp" else (None, None)
 
     fig = px.imshow(
@@ -111,7 +115,7 @@ try:
         zmax=z_max
     )
     
-    # 🎯 HIGH-TECH TARGET RETICLE
+    # 🎯 HIGH-TECH TARGET RETICLE (RESTORED)
     fig.add_trace(go.Scatter(
         x=[st.session_state.lon], y=[st.session_state.lat],
         mode="markers",
@@ -135,7 +139,7 @@ try:
         hovermode="closest"
     )
     
-    # Map click listener
+    # 🖱️ CAPTURING THE CLICK EVENT (RESTORED)
     map_event = st.plotly_chart(
         fig, 
         use_container_width=True, 
@@ -157,8 +161,12 @@ try:
     st.divider()
     c1, c2, c3, c4 = st.columns([1, 1, 1, 3])
     
-    # Ensure Xarray queries use the full 'latitude' and 'longitude' keywords for ERA5 compatibility
-    point_data = ds[param].sel(latitude=st.session_state.lat, longitude=st.session_state.lon, method="nearest")
+    # Teammate's robust coordinate checker
+    lat_key = 'lat' if 'lat' in ds.coords else 'latitude'
+    lon_key = 'lon' if 'lon' in ds.coords else 'longitude'
+    
+    # Fetching data using the session state variables
+    point_data = ds[param].sel({lat_key: st.session_state.lat, lon_key: st.session_state.lon}, method="nearest")
     current_val = float(point_data.sel(time=selected_time, method="nearest"))
 
     c1.metric(f"Local {param}", f"{current_val:.2f} {units.get(param, '')}")
