@@ -79,17 +79,18 @@ try:
     lat_in = st.sidebar.number_input("Latitude", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
     lon_in = st.sidebar.number_input("Longitude", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
 
-    # --- 3. CUSTOM COLOR SCALES (GREEN CENTERED AT 25°C) ---
+   # --- 3. CUSTOM COLOR SCALES (PRECISE THERMOGRAPHIC) ---
     # Total scale spans 90 degrees (-40 to 50). 
-    # 25°C is exactly at position 0.72 (65/90)
     temp_custom_scale = [
-        [0.00, "#000055"],  # Deep Space Blue (-40°C)
-        [0.33, "#0000FF"],  # Pure Blue (-10°C)
-        [0.55, "#00FFFF"],  # Cyan (10°C)
-        [0.72, "#00FF00"],  # Green (Exactly 25°C)
-        [0.80, "#FFFF00"],  # Yellow (32°C)
-        [0.88, "#FFA500"],  # Orange (40°C)
-        [1.00, "#FF0000"]   # Bright Red (50°C)
+        [0.000, "#000033"],  # Deep Space Navy (-40°C)
+        [0.222, "#00008B"],  # Dark Blue (Exactly -20°C)
+        [0.444, "#0000FF"],  # Standard Blue (Exactly 0°C)
+        [0.556, "#00BFFF"],  # Cyan/Deep Sky Blue (10°C)
+        [0.722, "#00FF00"],  # Green (Exactly 25°C)
+        [0.778, "#FFFF00"],  # Yellow (Exactly 30°C)
+        [0.833, "#FFA500"],  # Orange (Exactly 35°C)
+        [0.889, "#FF8C00"],  # Dark Orange (Exactly 40°C)
+        [1.000, "#FF0000"]   # Bright Red (50°C and above)
     ]
 
     cmaps = {"Temp": temp_custom_scale, "Wind Speed": "Viridis", "Precip": "Blues"}
