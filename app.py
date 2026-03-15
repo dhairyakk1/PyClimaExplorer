@@ -46,6 +46,21 @@ st.markdown("""
         background-color: #04070D !important;
         border-right: 1px solid rgba(0, 212, 255, 0.1);
     }
+    
+    /* 🎯 BRAND LOGO CSS */
+    .brand-logo { 
+        font-size: 2rem; 
+        font-weight: 900; 
+        text-align: center; 
+        background: linear-gradient(45deg, #00d4ff, #ffffff); 
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent; 
+        margin-top: 10px;
+        margin-bottom: 5px; 
+        letter-spacing: 1.5px; 
+        text-shadow: 0px 4px 15px rgba(0, 212, 255, 0.3);
+    }
+    
     .sidebar-title { font-size: 1.5rem; font-weight: bold; color: #00d4ff; text-align: center; margin-bottom: 20px;}
     .team-credit { text-align: center; font-size: 0.8rem; color: #555; margin-top: 50px; }
     
@@ -95,6 +110,8 @@ try:
     ds = load_climate_data()
 
     # --- 3. SIDEBAR: COMMAND CENTER ---
+    # 🎯 INJECTING THE BRAND LOGO HERE
+    st.sidebar.markdown("<div class='brand-logo'>PyClimaExplorer</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<div class='sidebar-title'>⚙️ COMMAND CENTER</div>", unsafe_allow_html=True)
     
     st.sidebar.markdown("**1. Data Layer**")
