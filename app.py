@@ -1,4 +1,5 @@
 import os
+import base64 # 🎯 Added to encode your logo
 import streamlit as st
 import xarray as xr
 import plotly.express as px
@@ -47,7 +48,7 @@ st.markdown("""
         border-right: 1px solid rgba(0, 212, 255, 0.1);
     }
     
-    /* 🎯 BRAND LOGO CSS - SCALED DOWN */
+    /* BRAND LOGO CSS - SCALED DOWN */
     .brand-logo { 
         font-size: 1.6rem; 
         font-weight: 900; 
@@ -67,6 +68,29 @@ st.markdown("""
     hr { border-color: rgba(0, 212, 255, 0.1); }
     </style>
     """, unsafe_allow_html=True)
+
+# 🎯 FLOATING TOP-RIGHT TEAM LOGO
+try:
+    with open("logo.png", "rb") as f:
+        data = base64.b64encode(f.read()).decode("utf-8")
+    st.markdown(
+        f'''
+        <div style="position: fixed; top: 15px; right: 25px; z-index: 9999;">
+            <img src="data:image/png;base64,{data}" width="70" style="border-radius: 50%; box-shadow: 0 4px 15px rgba(0,212,255,0.4); border: 2px solid rgba(0,212,255,0.2);">
+        </div>
+        ''',
+        unsafe_allow_html=True
+    )
+except FileNotFoundError:
+    # Safe fallback if logo.png isn't in the folder yet
+    st.markdown(
+        '''
+        <div style="position: fixed; top: 15px; right: 25px; z-index: 9999; color: #00d4ff; font-weight: 800; font-size: 1rem; text-shadow: 0 0 10px rgba(0,212,255,0.5); letter-spacing: 1.5px;">
+            THE POINTLESS POINTERS
+        </div>
+        ''',
+        unsafe_allow_html=True
+    )
 
 # --- SESSION STATE INITIALIZATION ---
 if "lat" not in st.session_state: st.session_state.lat = 25.3  # Varanasi
