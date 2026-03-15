@@ -47,9 +47,9 @@ st.markdown("""
         border-right: 1px solid rgba(0, 212, 255, 0.1);
     }
     
-    /* 🎯 BRAND LOGO CSS */
+    /* 🎯 BRAND LOGO CSS - SCALED DOWN */
     .brand-logo { 
-        font-size: 2rem; 
+        font-size: 1.6rem; 
         font-weight: 900; 
         text-align: center; 
         background: linear-gradient(45deg, #00d4ff, #ffffff); 
@@ -61,7 +61,7 @@ st.markdown("""
         text-shadow: 0px 4px 15px rgba(0, 212, 255, 0.3);
     }
     
-    .sidebar-title { font-size: 1.5rem; font-weight: bold; color: #00d4ff; text-align: center; margin-bottom: 20px;}
+    .sidebar-title { font-size: 1.1rem; font-weight: bold; color: #00d4ff; text-align: center; margin-bottom: 20px; letter-spacing: 2px;}
     .team-credit { text-align: center; font-size: 0.8rem; color: #555; margin-top: 50px; }
     
     hr { border-color: rgba(0, 212, 255, 0.1); }
@@ -110,7 +110,6 @@ try:
     ds = load_climate_data()
 
     # --- 3. SIDEBAR: COMMAND CENTER ---
-    # 🎯 INJECTING THE BRAND LOGO HERE
     st.sidebar.markdown("<div class='brand-logo'>PyClimaExplorer</div>", unsafe_allow_html=True)
     st.sidebar.markdown("<div class='sidebar-title'>⚙️ COMMAND CENTER</div>", unsafe_allow_html=True)
     
@@ -175,7 +174,6 @@ try:
             zmin=z_min, zmax=z_max 
         )
         
-        # 2D CROSSHAIR
         fig.add_trace(go.Scatter(x=[st.session_state.lon], y=[st.session_state.lat], mode="markers", marker=dict(symbol="circle-open", size=8, line=dict(color="#FF0000", width=2.5)), showlegend=False, hoverinfo="skip"))
         gap, length = 1.2, 10.0 
         l_style = dict(color="#FF0000", width=1.5)
@@ -222,10 +220,9 @@ try:
         globe_fig = go.Figure()
 
         if param == "Precipitation":
-            # 🎯 SCATTERGEO FOR RAIN: Dark Oceans, White Land, Synchronized Precipitation Scale
             df = data_slice.to_dataframe().reset_index()
             val_col = units[param]
-            df_rain = df[df[val_col] > 0.1] # Filter out dry areas so the map shows through
+            df_rain = df[df[val_col] > 0.1] 
             
             globe_fig.add_trace(go.Scattergeo(
                 lon=df_rain['lon'],
@@ -233,26 +230,24 @@ try:
                 marker=dict(
                     size=4,
                     color=df_rain[val_col],
-                    colorscale=cmaps.get(param, "Viridis"), # 🎯 NOW PERFECTLY MATCHES 2D MAP
+                    colorscale=cmaps.get(param, "Viridis"),
                     cmin=z_min, cmax=z_max,
                     opacity=0.85
                 ),
                 showlegend=False, hoverinfo="skip"
             ))
             
-            # Geographic Settings for Precipitation
             globe_fig.update_geos(
                 projection_type="orthographic",
                 projection_rotation=dict(lon=st.session_state.lon, lat=st.session_state.lat, roll=0),
-                showocean=True, oceancolor="#0A1930",  # Dark Blue Ocean
-                showland=True, landcolor="#FFFFFF",    # White Land
+                showocean=True, oceancolor="#0A1930",
+                showland=True, landcolor="#FFFFFF",
                 showcoastlines=True, coastlinecolor="rgba(0,0,0,0.2)",
                 showlakes=False,
                 bgcolor="rgba(0,0,0,0)",
                 framecolor="rgba(0,0,0,0)"
             )
             
-            # 🎯 FIXED 3D BEACON FOR PRECIPITATION
             globe_fig.add_trace(go.Scattergeo(
                 lon=[st.session_state.lon],
                 lat=[st.session_state.lat],
@@ -263,7 +258,6 @@ try:
             ))
             
         else:
-            # 🎯 CONTINUOUS SURFACE FOR TEMP / WIND
             lon_grid, lat_grid = np.meshgrid(data_slice.lon.values, data_slice.lat.values)
             lon_rad, lat_rad = np.radians(lon_grid), np.radians(lat_grid)
             
@@ -283,7 +277,6 @@ try:
                 
             globe_fig.add_trace(go.Surface(**surface_kwargs))
             
-            # Scene rotation for Temp/Wind
             cam_x = 1.5 * np.cos(np.radians(st.session_state.lat)) * np.cos(np.radians(st.session_state.lon))
             cam_y = 1.5 * np.cos(np.radians(st.session_state.lat)) * np.sin(np.radians(st.session_state.lon))
             cam_z = 1.5 * np.sin(np.radians(st.session_state.lat))
@@ -298,7 +291,6 @@ try:
                 )
             )
 
-            # 🎯 FIXED 3D BEACON FOR TEMP/WIND
             mx = 1.02 * np.cos(np.radians(st.session_state.lat)) * np.cos(np.radians(st.session_state.lon))
             my = 1.02 * np.cos(np.radians(st.session_state.lat)) * np.sin(np.radians(st.session_state.lon))
             mz = 1.02 * np.sin(np.radians(st.session_state.lat))
@@ -311,7 +303,6 @@ try:
                 hoverinfo="skip"
             ))
 
-        # Apply transparent backgrounds
         globe_fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=0, r=0, b=0, t=0), height=650)
         st.plotly_chart(globe_fig, use_container_width=True)
 
