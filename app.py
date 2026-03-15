@@ -94,10 +94,9 @@ except FileNotFoundError:
 # --- SESSION STATE INITIALIZATION ---
 if "lat" not in st.session_state: st.session_state.lat = 25.3  # Varanasi
 if "lon" not in st.session_state: st.session_state.lon = 83.0
-
-def sync_sidebar():
-    st.session_state.lat = st.session_state.sidebar_lat
-    st.session_state.lon = st.session_state.sidebar_lon
+if "sidebar_lat" not in st.session_state: st.session_state.sidebar_lat = 25.3
+if "sidebar_lon" not in st.session_state: st.session_state.sidebar_lon = 83.0
+if "city_selector" not in st.session_state: st.session_state.city_selector = "-- Select City --"
 
 # --- 2. DATA ENGINE ---
 @st.cache_resource(show_spinner="Booting Climate Engine...")
@@ -159,13 +158,24 @@ try:
         "Tokyo, Japan": (35.6, 139.6), "Varanasi, India": (25.3, 83.0)
     }
     
-    city_choice = st.sidebar.selectbox("Quick Jump", ["-- Select City --"] + list(GLOBAL_CITIES.keys()), label_visibility="collapsed")
-    if city_choice != "-- Select City --":
-        st.session_state.lat, st.session_state.lon = GLOBAL_CITIES[city_choice]
+    def handle_city_change():
+        city = st.session_state.city_selector
+        if city != "-- Select City --":
+            st.session_state.lat, st.session_state.lon = GLOBAL_CITIES[city]
+            st.session_state.sidebar_lat = st.session_state.lat
+            st.session_state.sidebar_lon = st.session_state.lon
+
+    def load_custom_coords():
+        st.session_state.lat = st.session_state.sidebar_lat
+        st.session_state.lon = st.session_state.sidebar_lon
+        st.session_state.city_selector = "-- Select City --"
+    
+    st.sidebar.selectbox("Quick Jump", ["-- Select City --"] + list(GLOBAL_CITIES.keys()), key="city_selector", on_change=handle_city_change, label_visibility="collapsed")
 
     colA, colB = st.sidebar.columns(2)
-    colA.number_input("Lat", value=st.session_state.lat, step=0.5, key="sidebar_lat", on_change=sync_sidebar)
-    colB.number_input("Lon", value=st.session_state.lon, step=0.5, key="sidebar_lon", on_change=sync_sidebar)
+    colA.number_input("Lat", step=0.5, key="sidebar_lat")
+    colB.number_input("Lon", step=0.5, key="sidebar_lon")
+    st.sidebar.button("Load", on_click=load_custom_coords, use_container_width=True)
 
     st.sidebar.markdown("<div class='team-credit'>Built by <b>The Pointless Pointers</b></div>", unsafe_allow_html=True)
 
